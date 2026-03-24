@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NISTI Executive Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --navy: #1E3A8A;
+    --navy-dark: #162d6e;
+    --navy-light: #2d52c4;
+    --positive: #059669;
+    --positive-bg: #d1fae5;
+    --critical: #DC2626;
+    --critical-bg: #fee2e2;
+    --warning: #D97706;
+    --warning-bg: #fef3c7;
+    --bg: #F8FAFC;
+    --surface: #ffffff;
+    --surface-2: #F1F5F9;
+    --border: #E2E8F0;
+    --border-strong: #CBD5E1;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #94A3B8;
+    --sidebar-w: 220px;
+    --topbar-h: 60px;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.05);
+    --shadow-strong: 0 4px 24px rgba(30,58,138,0.10);
+    --gap: 16px;
+    --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+  }
+  [data-theme="dark"] {
+    --bg: #0B1120;
+    --surface: #131C2E;
+    --surface-2: #1A2640;
+    --border: #1E2D47;
+    --border-strong: #2A3F5F;
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-muted: #475569;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+    --navy-light: #4A7AE8;
+    --positive-bg: #064e3b;
+    --critical-bg: #450a0a;
+    --warning-bg: #431407;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 14px;
+    transition: background var(--transition), color var(--transition);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--navy);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition: width 0.3s ease;
+    position: relative;
+    z-index: 10;
+  }
+  .sidebar-logo {
+    height: var(--topbar-h);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    gap: 10px;
+  }
+  .logo-mark {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #60A5FA, #3B82F6);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: white; font-size: 13px;
+    letter-spacing: -0.5px; flex-shrink: 0;
+  }
+  .logo-text {
+    color: white;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+  }
+  .logo-sub {
+    color: rgba(255,255,255,0.45);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+  }
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    padding: 12px 10px 6px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: rgba(255,255,255,0.65);
+    font-weight: 500;
+    font-size: 13.5px;
+    transition: background var(--transition), color var(--transition);
+    position: relative;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+  .nav-item.active {
+    background: rgba(96,165,250,0.2);
+    color: #93C5FD;
+  }
+  .nav-item.active::before {
+    content:'';
+    position: absolute;
+    left: 0; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 20px;
+    background: #60A5FA;
+    border-radius: 0 2px 2px 0;
+  }
+  .nav-icon { width: 18px; text-align: center; font-size: 15px; flex-shrink: 0; }
+  .nav-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: rgba(220,38,38,0.25);
+    color: #FCA5A5;
+  }
+  .nav-badge.positive {
+    background: rgba(5,150,105,0.25);
+    color: #6EE7B7;
+  }
+  .nav-badge.warning {
+    background: rgba(217,119,6,0.25);
+    color: #FCD34D;
+  }
+
+  .sidebar-footer {
+    padding: 16px 12px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .sidebar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #60A5FA, #A78BFA);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
+  }
+  .user-name { color: rgba(255,255,255,0.8); font-size: 13px; font-weight: 500; }
+  .user-role { color: rgba(255,255,255,0.35); font-size: 11px; }
+
+  /* ── MAIN ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    height: var(--topbar-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+    flex-shrink: 0;
+    z-index: 5;
+  }
+  .topbar-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+    margin-right: auto;
+  }
+  .topbar-title span {
+    color: var(--navy);
+  }
+  [data-theme="dark"] .topbar-title span { color: var(--navy-light); }
+  .topbar-context {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-right: auto;
+    white-space: nowrap;
+  }
+
+  .date-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color var(--transition);
+  }
+  .date-picker:hover { border-color: var(--navy-light); }
+  .date-picker input[type="date"] {
+    border: none; background: transparent;
+    font-size: 13px; font-weight: 500;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; outline: none;
+  }
+
+  .time-toggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .time-btn {
+    padding: 7px 14px;
+    border: none;
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    letter-spacing: 0.3px;
+  }
+  .time-btn.active {
+    background: var(--navy);
+    color: white;
+  }
+  .time-btn:not(.active):hover { background: var(--border); }
+
+  .theme-toggle {
+    width: 36px; height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: background var(--transition);
+  }
+  .theme-toggle:hover { background: var(--border); }
+
+  /* ── CONTENT AREA ── */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--gap);
+  }
+  .content > * { min-width: 0; }
+  .page { display: none; }
+  .page.active { display: flex; flex-direction: column; gap: var(--gap); }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    transition: background var(--transition), border-color var(--transition);
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .card-title .period-tag {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-left: 6px;
+  }
+  .card-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  /* ── ROW 1: KPI STRIP ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--gap);
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: all var(--transition);
+  }
+  .kpi-card::before {
+    content:'';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--navy);
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .kpi-card.positive::before { background: var(--positive); }
+  .kpi-card.critical::before { background: var(--critical); }
+  .kpi-card.warning::before { background: var(--warning); }
+
+  .kpi-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .kpi-value {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    letter-spacing: -2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-value.sm { font-size: 32px; }
+  .kpi-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .kpi-delta {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .kpi-delta.up { background: var(--positive-bg); color: var(--positive); }
+  .kpi-delta.down { background: var(--critical-bg); color: var(--critical); }
+  .kpi-delta.neutral { background: var(--surface-2); color: var(--text-secondary); }
+  .kpi-sub { font-size: 12px; color: var(--text-muted); }
+  .kpi-grid-mobile-hint {
+    display: none;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: -8px;
+    text-align: right;
+  }
+
+  .sparkline-wrap { height: 36px; margin-top: 4px; }
+
+  /* Alert card pulse */
+  .kpi-card.has-alerts::after {
+    content:'';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    box-shadow: inset 0 0 0 2px var(--critical);
+    animation: alertPulse 2s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes alertPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .alert-count-row {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .alert-pill {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: var(--critical-bg);
+    color: var(--critical);
+  }
+  .alert-pill .count { font-size: 16px; font-weight: 700; }
+
+  /* ── ROW 2 ── */
+  .row-2 {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: var(--gap);
+  }
+
+  /* SLA Panel */
+  .sla-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .sla-item {
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+  .sla-val {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .sla-lbl { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .progress-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease;
+  }
+
+  .backlog-stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .backlog-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+  .backlog-value { font-size: 22px; font-weight: 700; }
+
+  /* ── ROW 3: ACTION ZONE ── */
+  .row-3 {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: var(--gap);
+  }
+
+  .alert-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .alert-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .alert-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-top: 5px; flex-shrink: 0;
+  }
+  .alert-info { flex: 1; min-width: 0; }
+  .alert-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .alert-detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .alert-age {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--critical-bg);
+    color: var(--critical);
+    white-space: nowrap;
+  }
+
+  .signal-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .signal-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .signal-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+  .signal-value { font-size: 14px; font-weight: 700; color: var(--text-primary); text-align: right; }
+  .signal-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; text-align: right; }
+  .signal-row > div:last-child { text-align: right; }
+
+  /* ── DEEP DIVE PAGES ── */
+  .page-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .page-subtitle { font-size: 13px; color: var(--text-muted); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); }
+  .span-2 { grid-column: span 2; }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table th:last-child,
+  .data-table td:last-child {
+    text-align: right;
+  }
+  .data-table td {
+    font-size: 13px;
+    color: var(--text-primary);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--surface-2); }
+  .risk-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .risk-high { background: var(--critical-bg); color: var(--critical); }
+  .risk-medium { background: var(--warning-bg); color: var(--warning); }
+  .risk-low { background: var(--positive-bg); color: var(--positive); }
+
+  /* Funnel */
+  .funnel-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .funnel-step:last-child { border-bottom: none; }
+  .funnel-bar-wrap { flex: 1; }
+  .funnel-bar {
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    transition: width 1s ease;
+  }
+  .funnel-meta { text-align: right; min-width: 80px; }
+  .funnel-num { font-size: 20px; font-weight: 700; line-height: 1; }
+  .funnel-pct { font-size: 12px; color: var(--text-muted); }
+
+  /* Issue log */
+  .issue-row {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .issue-row:last-child { border-bottom: none; }
+  .issue-icon {
+    width: 28px; height: 28px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex-shrink: 0; margin-top: 1px;
+  }
+  .issue-content { flex: 1; }
+  .issue-title { font-size: 13px; font-weight: 600; }
+  .issue-detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .issue-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+
+  /* Chart container */
+  .chart-wrap { position: relative; }
+  canvas { max-width: 100%; }
+
+  /* Scrollable content area */
+  .content::-webkit-scrollbar { width: 4px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+  /* ── PROVINCIAL CHART ── */
+  .province-bars { display: flex; flex-direction: column; gap: 10px; }
+  .province-item { display: flex; align-items: center; gap: 10px; }
+  .province-name { width: 80px; font-size: 12px; color: var(--text-secondary); text-align: right; flex-shrink: 0; }
+  .province-bar-bg { flex: 1; height: 18px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .province-bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; font-weight: 600; color: white; transition: width 1s ease; }
+  .province-count { width: 40px; font-size: 12px; font-weight: 600; color: var(--text-primary); }
+
+  /* Mobile adjustments */
+  @media (max-width: 1100px) {
+    .kpi-grid {
+      display: flex;
+      overflow-x: auto;
+      gap: 12px;
+      padding-bottom: 6px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+    .kpi-grid .kpi-card {
+      min-width: calc(50% - 6px);
+      flex: 0 0 calc(50% - 6px);
+      scroll-snap-align: start;
+    }
+    .kpi-grid-mobile-hint { display: block; }
+    .row-2, .row-3, .grid-2 { grid-template-columns: 1fr; }
+    .span-2 { grid-column: span 1; }
+    .mini-stats { grid-template-columns: repeat(2, 1fr); }
+    .topbar {
+      height: auto;
+      min-height: var(--topbar-h);
+      padding: 10px 16px;
+      flex-wrap: wrap;
+      row-gap: 10px;
+    }
+    .topbar-title {
+      width: 100%;
+      margin-right: 0;
+      text-align: left;
+    }
+    .topbar-context { width: 100%; }
+  }
+  @media (max-width: 768px) {
+    body {
+      display: block;
+      height: auto;
+      min-height: 100vh;
+      overflow: auto;
+    }
+    .sidebar {
+      width: 100%;
+      height: auto;
+      min-height: auto;
+    }
+    .sidebar-logo {
+      padding: 10px 16px;
+      height: auto;
+    }
+    .sidebar-nav {
+      padding: 10px 8px;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      gap: 6px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .nav-section-label,
+    .sidebar-footer { display: none; }
+    .nav-item {
+      justify-content: center;
+      padding: 8px 12px;
+      min-width: max-content;
+      font-size: 12px;
+    }
+    .nav-item span { display: inline; }
+    .nav-icon { width: auto; }
+    .nav-badge { display: none; }
+    .main { min-height: 0; }
+    .content { padding: 12px; }
+    .kpi-grid .kpi-card {
+      min-width: 86%;
+      flex-basis: 86%;
+    }
+    .card { padding: 16px; }
+    .kpi-value { font-size: 34px; }
+    .kpi-value.sm { font-size: 28px; }
+    .topbar-title { font-size: 13px; }
+    .topbar-context { font-size: 11px; }
+    .date-picker { padding: 6px 10px; }
+    .time-btn { padding: 6px 10px; }
+    .mini-stats { grid-template-columns: 1fr; }
+    .data-table {
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+  }
+  @media (max-width: 480px) {
+    .topbar {
+      padding: 10px 12px;
+      gap: 8px;
+    }
+    .topbar-title { font-size: 12px; }
+    .kpi-grid .kpi-card {
+      min-width: 92%;
+      flex-basis: 92%;
+    }
+    .chart-wrap[style*="height:220px"] { height: 200px !important; }
+  }
+
+  /* Stat mini cards */
+  .mini-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .mini-stat {
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+  .mini-stat-val { font-size: 22px; font-weight: 700; line-height: 1; }
+  .mini-stat-lbl { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Loading animation for numbers */
+  @keyframes countUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .kpi-value, .sla-val, .funnel-num {
+    animation: countUp 0.5s ease both;
+  }
+
+  /* Donut legend */
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; color: var(--text-secondary); }
+  .legend-val { font-weight: 600; color: var(--text-primary); }
+
+  /* Segmented control */
+  .segment-ctrl {
+    display: flex; gap: 4px;
+    padding: 4px;
+    background: var(--surface-2);
+    border-radius: 8px;
+  }
+  .seg-btn {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .seg-btn.active {
+    background: var(--surface);
+    color: var(--text-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  /* Status dot */
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">N</div>
+    <div>
+      <div class="logo-text">NISTI</div>
+      <div class="logo-sub">Analytics</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <div class="nav-item active" onclick="showPage('overview', this)">
+      <span class="nav-icon">⊞</span>
+      <span>Overview</span>
+    </div>
+    <div class="nav-item" onclick="showPage('finance', this)">
+      <span class="nav-icon">◈</span>
+      <span>Finance & Forecast</span>
+      <span class="nav-badge positive">+3.2%</span>
+    </div>
+    <div class="nav-item" onclick="showPage('performance', this)">
+      <span class="nav-icon">◎</span>
+      <span>Performance & Lab</span>
+      <span class="nav-badge warning">47</span>
+    </div>
+    <div class="nav-item" onclick="showPage('customers', this)">
+      <span class="nav-icon">◉</span>
+      <span>Customers</span>
+    </div>
+    <div class="nav-section-label">System</div>
+    <div class="nav-item" onclick="showPage('settings', this)">
+      <span class="nav-icon">⊙</span>
+      <span>Settings</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar">CE</div>
+      <div>
+        <div class="user-name">CEO</div>
+        <div class="user-role">Executive</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-title"><span>NISTI</span> Executive Overview</div>
+    <div class="topbar-context" id="globalPeriodLabel">Viewing: Today (Daily)</div>
+    <label class="date-picker">
+      📅 <input type="date" id="datePicker" value="">
+    </label>
+    <div class="time-toggle">
+      <button class="time-btn active" onclick="setTimeFrame('D',this)">D</button>
+      <button class="time-btn" onclick="setTimeFrame('M',this)">M</button>
+      <button class="time-btn" onclick="setTimeFrame('Y',this)">Y</button>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ═══ PAGE: OVERVIEW ═══ -->
+    <div class="page active" id="page-overview">
+
+      <!-- ROW 1: KPI STRIP -->
+      <div class="kpi-grid">
+
+        <!-- Revenue -->
+        <div class="kpi-card positive">
+          <div class="kpi-label">Revenue</div>
+          <div class="kpi-value" id="kpi-revenue">$84,240</div>
+          <div class="kpi-meta">
+            <span class="kpi-delta up" id="kpi-rev-delta">↑ 6.4%</span>
+            <span class="kpi-sub" id="kpi-rev-sub">vs forecast</span>
+          </div>
+          <div class="sparkline-wrap">
+            <canvas id="sparkRevenue" height="36"></canvas>
+          </div>
+        </div>
+
+        <!-- Forecast Revenue -->
+        <div class="kpi-card">
+          <div class="kpi-label">Forecast Revenue</div>
+          <div class="kpi-value sm" id="kpi-forecast">$79,180</div>
+          <div class="kpi-meta">
+            <span class="kpi-delta neutral" id="kpi-fc-period">Period: Monthly</span>
+          </div>
+          <div style="margin-top:8px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px">
+              <span>Actual</span><span>Projected EOD</span>
+            </div>
+            <div class="progress-bar" style="height:8px">
+              <div class="progress-fill" id="fc-progress" style="width:68%;background:var(--navy)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:4px">
+              <span id="fc-actual-label">$84,240</span>
+              <span id="fc-projected">$123,900</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lab Throughput -->
+        <div class="kpi-card">
+          <div class="kpi-label">Lab Throughput</div>
+          <div class="kpi-value sm" id="kpi-throughput">94.2%</div>
+          <div class="kpi-meta">
+            <span class="kpi-delta up">↑ Efficiency</span>
+          </div>
+          <div style="margin-top:8px;display:flex;gap:10px">
+            <div style="flex:1;background:var(--surface-2);border-radius:8px;padding:8px 10px;border:1px solid var(--border)">
+              <div style="font-size:18px;font-weight:700" id="tp-received">312</div>
+              <div style="font-size:11px;color:var(--text-muted)">Received</div>
+            </div>
+            <div style="flex:1;background:var(--surface-2);border-radius:8px;padding:8px 10px;border:1px solid var(--border)">
+              <div style="font-size:18px;font-weight:700;color:var(--positive)" id="tp-released">294</div>
+              <div style="font-size:11px;color:var(--text-muted)">Released</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Critical Alerts -->
+        <div class="kpi-card critical has-alerts">
+          <div class="kpi-label">Critical Alerts</div>
+          <div class="kpi-value" style="color:var(--critical)" id="kpi-alerts">7</div>
+          <div class="alert-count-row" id="alert-pills">
+            <div class="alert-pill"><span class="count">3</span> Cert. Errors</div>
+            <div class="alert-pill"><span class="count">2</span> Complaints</div>
+            <div class="alert-pill"><span class="count">2</span> Quality</div>
+          </div>
+        </div>
+
+      </div>
+      <div class="kpi-grid-mobile-hint">Swipe cards horizontally on smaller screens</div>
+
+      <!-- ROW 2: PERFORMANCE SNAPSHOT -->
+      <div class="row-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Efficiency Overview <span class="period-tag" id="efficiencyPeriodTag">(Daily)</span></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted)"><span style="display:inline-block;width:10px;height:10px;background:var(--navy);border-radius:2px"></span>Samples</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted)"><span style="display:inline-block;width:14px;height:2px;background:var(--positive)"></span>Revenue</span>
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:180px">
+            <canvas id="efficiencyChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">SLA & Backlog</div>
+          </div>
+          <div class="sla-grid">
+            <div class="sla-item">
+              <div class="sla-val" style="color:var(--positive)">87.4%</div>
+              <div class="sla-lbl">On-Time</div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width:87.4%;background:var(--positive)"></div>
+              </div>
+            </div>
+            <div class="sla-item">
+              <div class="sla-val" style="color:var(--critical)">12.6%</div>
+              <div class="sla-lbl">Delayed</div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width:12.6%;background:var(--critical)"></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="backlog-stat">
+              <div>
+                <div class="backlog-label">Pending Samples</div>
+                <div style="font-size:11px;color:var(--text-muted)">In backlog</div>
+              </div>
+              <div>
+                <div class="backlog-value" style="color:var(--warning)">47</div>
+                <div style="font-size:11px;color:var(--text-muted);text-align:right">samples</div>
+              </div>
+            </div>
+            <div class="backlog-stat">
+              <div>
+                <div class="backlog-label">Avg. Processing Time</div>
+              </div>
+              <div class="backlog-value" style="color:var(--text-primary)">18h</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: ACTION ZONE -->
+      <div class="row-3">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Top Alerts — Late Samples</div>
+            <span class="card-badge" style="background:var(--critical-bg);color:var(--critical)">3 Critical</span>
+          </div>
+          <div>
+            <div class="alert-row">
+              <div class="alert-dot" style="background:var(--critical)"></div>
+              <div class="alert-info">
+                <div class="alert-name">Sample #SMP-2024-0891</div>
+                <div class="alert-detail">Awaiting release · Biochemistry dept · MegaCorp Ltd</div>
+              </div>
+              <div class="alert-age">72h overdue</div>
+            </div>
+            <div class="alert-row">
+              <div class="alert-dot" style="background:var(--critical)"></div>
+              <div class="alert-info">
+                <div class="alert-name">Sample #SMP-2024-0876</div>
+                <div class="alert-detail">Processing delay · Microbiology · National Hospital</div>
+              </div>
+              <div class="alert-age">61h overdue</div>
+            </div>
+            <div class="alert-row">
+              <div class="alert-dot" style="background:var(--warning)"></div>
+              <div class="alert-info">
+                <div class="alert-name">Sample #SMP-2024-0862</div>
+                <div class="alert-detail">Certificate not issued · Genetics · Regional Clinic A</div>
+              </div>
+              <div class="alert-age">49h overdue</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Business Signals <span class="period-tag" id="signalsPeriodTag">(Today)</span></div>
+          </div>
+          <div>
+            <div class="signal-row">
+              <div class="signal-label" id="topCustomerLabel">Top Customer Today</div>
+              <div>
+                <div class="signal-value">MegaCorp Ltd</div>
+                <div class="signal-sub">$12,440 · 28 samples</div>
+              </div>
+            </div>
+            <div class="signal-row">
+              <div class="signal-label">High Volume Customer</div>
+              <div>
+                <div class="signal-value">National Hospital</div>
+                <div class="signal-sub">MTD: $41,200</div>
+              </div>
+            </div>
+            <div class="signal-row">
+              <div class="signal-label">Urgent Samples</div>
+              <div>
+                <div class="signal-value" style="color:var(--critical)">11 STAT</div>
+                <div class="signal-sub">4 in progress</div>
+              </div>
+            </div>
+            <div class="signal-row">
+              <div class="signal-label" id="newCustomersLabel">New Customers (MTD)</div>
+              <div>
+                <div class="signal-value" style="color:var(--positive)" id="newCustomersValue">+8</div>
+                <div class="signal-sub" id="newCustomersSub">vs 5 last month</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: FINANCE ═══ -->
+    <div class="page" id="page-finance">
+      <div>
+        <div class="page-title">Finance & Forecast</div>
+        <div class="page-subtitle">Revenue tracking, customer segmentation, and retention analysis</div>
+      </div>
+
+      <div class="mini-stats">
+        <div class="mini-stat">
+          <div class="mini-stat-val" style="color:var(--positive)" id="finRevenueValue">$84,240</div>
+          <div class="mini-stat-lbl" id="finRevenueLabel">Today Revenue</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val">$1.24M</div>
+          <div class="mini-stat-lbl">MTD Revenue</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" style="color:var(--navy)">$14.8M</div>
+          <div class="mini-stat-lbl">YTD Revenue</div>
+        </div>
+      </div>
+
+      <div class="card span-2">
+        <div class="card-header">
+          <div class="card-title">Revenue vs Forecast <span class="period-tag" id="revForecastPeriodTag">(Daily)</span></div>
+          <div class="segment-ctrl">
+            <button class="seg-btn active">Monthly</button>
+            <button class="seg-btn">Quarterly</button>
+            <button class="seg-btn">Yearly</button>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:200px">
+          <canvas id="revForecastChart"></canvas>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Revenue by Customer Type</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center">
+            <div style="height:160px;position:relative">
+              <canvas id="segmentDonut"></canvas>
+            </div>
+            <div class="donut-legend">
+              <div class="legend-item">
+                <div class="legend-dot" style="background:#1E3A8A"></div>
+                <div class="legend-label">Corporate</div>
+                <div class="legend-val">48%</div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background:#3B82F6"></div>
+                <div class="legend-label">Hospital</div>
+                <div class="legend-val">31%</div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background:#93C5FD"></div>
+                <div class="legend-label">Clinic</div>
+                <div class="legend-val">14%</div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background:#BFDBFE"></div>
+                <div class="legend-label">Individual</div>
+                <div class="legend-val">7%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">New vs Returning Customers</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center">
+            <div style="height:160px;position:relative">
+              <canvas id="newReturnDonut"></canvas>
+            </div>
+            <div class="donut-legend">
+              <div class="legend-item">
+                <div class="legend-dot" style="background:#059669"></div>
+                <div class="legend-label">Returning</div>
+                <div class="legend-val">78%</div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background:#6EE7B7"></div>
+                <div class="legend-label">New</div>
+                <div class="legend-val">22%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Retention Risk Table</div>
+          <span class="card-badge risk-high">3 High Risk</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Last Activity</th>
+              <th>Inactivity</th>
+              <th>Revenue (LY)</th>
+              <th>Risk</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>PharmaCo Industries</strong></td>
+              <td>Jan 15, 2022</td>
+              <td>2 years</td>
+              <td>$128,400</td>
+              <td><span class="risk-badge risk-high">High</span></td>
+            </tr>
+            <tr>
+              <td><strong>City General Hospital</strong></td>
+              <td>Feb 28, 2023</td>
+              <td>13 months</td>
+              <td>$84,200</td>
+              <td><span class="risk-badge risk-high">High</span></td>
+            </tr>
+            <tr>
+              <td><strong>AgroChem Ltd</strong></td>
+              <td>Mar 10, 2023</td>
+              <td>13 months</td>
+              <td>$62,800</td>
+              <td><span class="risk-badge risk-high">High</span></td>
+            </tr>
+            <tr>
+              <td><strong>Regional Clinic B</strong></td>
+              <td>Feb 14, 2024</td>
+              <td>10 months</td>
+              <td>$34,100</td>
+              <td><span class="risk-badge risk-medium">Medium</span></td>
+            </tr>
+            <tr>
+              <td><strong>Research Institute X</strong></td>
+              <td>Mar 01, 2024</td>
+              <td>10 months</td>
+              <td>$28,600</td>
+              <td><span class="risk-badge risk-medium">Medium</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: PERFORMANCE ═══ -->
+    <div class="page" id="page-performance">
+      <div>
+        <div class="page-title">Performance & Quality</div>
+        <div class="page-subtitle">Lab operations, throughput funnel, error tracking, and issue log</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Throughput Funnel</div>
+          </div>
+          <div class="funnel-step">
+            <div class="funnel-bar-wrap">
+              <div class="funnel-bar" style="width:100%;background:var(--navy)">Received</div>
+            </div>
+            <div class="funnel-meta">
+              <div class="funnel-num">312</div>
+              <div class="funnel-pct">100%</div>
+            </div>
+          </div>
+          <div class="funnel-step">
+            <div class="funnel-bar-wrap">
+              <div class="funnel-bar" style="width:87%;background:var(--navy-light)">Processing</div>
+            </div>
+            <div class="funnel-meta">
+              <div class="funnel-num">272</div>
+              <div class="funnel-pct">87.2%</div>
+            </div>
+          </div>
+          <div class="funnel-step">
+            <div class="funnel-bar-wrap">
+              <div class="funnel-bar" style="width:94%;background:var(--positive)">Released</div>
+            </div>
+            <div class="funnel-meta">
+              <div class="funnel-num">294</div>
+              <div class="funnel-pct">94.2%</div>
+            </div>
+          </div>
+          <div class="funnel-step" style="border:none">
+            <div class="funnel-bar-wrap">
+              <div class="funnel-bar" style="width:15%;background:var(--warning)">Pending</div>
+            </div>
+            <div class="funnel-meta">
+              <div class="funnel-num" style="color:var(--warning)">47</div>
+              <div class="funnel-pct">15.1%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">SLA Performance</div>
+          </div>
+          <div style="height:180px;position:relative">
+            <canvas id="slaDonut"></canvas>
+          </div>
+          <div class="donut-legend" style="margin-top:8px">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--positive)"></div>
+              <div class="legend-label">On-Time</div>
+              <div class="legend-val">87.4%</div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--critical)"></div>
+              <div class="legend-label">Delayed</div>
+              <div class="legend-val">12.6%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Certificate Errors</div>
+            <span class="card-badge risk-high">3 Active</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr><th>Sample ID</th><th>Type</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>#SMP-0891</td><td>Missing fields</td><td><span class="risk-badge risk-high">Open</span></td></tr>
+              <tr><td>#SMP-0854</td><td>Invalid signature</td><td><span class="risk-badge risk-high">Open</span></td></tr>
+              <tr><td>#SMP-0823</td><td>Date mismatch</td><td><span class="risk-badge risk-medium">Review</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Data Entry Issues</div>
+            <span class="card-badge risk-medium">5 This Week</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr><th>Sample ID</th><th>Issue</th><th>Dept</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>#SMP-0882</td><td>Wrong patient DOB</td><td>Bio</td></tr>
+              <tr><td>#SMP-0871</td><td>Missing test code</td><td>Micro</td></tr>
+              <tr><td>#SMP-0865</td><td>Duplicate entry</td><td>Chem</td></tr>
+              <tr><td>#SMP-0859</td><td>Wrong client ID</td><td>Genetics</td></tr>
+              <tr><td>#SMP-0844</td><td>Incorrect volume</td><td>Histo</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Provincial Workload Distribution</div>
+        </div>
+        <div class="province-bars" id="provinceBars"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Issue Log</div>
+          <span class="card-badge risk-medium">4 Open</span>
+        </div>
+        <div>
+          <div class="issue-row">
+            <div class="issue-icon" style="background:var(--critical-bg)">⚠</div>
+            <div class="issue-content">
+              <div class="issue-title">Complaint: Delayed result — MegaCorp Ltd</div>
+              <div class="issue-detail">Customer reported 96h delay on urgent biochemistry panel</div>
+            </div>
+            <div class="issue-time">2h ago</div>
+          </div>
+          <div class="issue-row">
+            <div class="issue-icon" style="background:var(--warning-bg)">↺</div>
+            <div class="issue-content">
+              <div class="issue-title">Repeated Request: Retest — National Hospital</div>
+              <div class="issue-detail">Sample #SMP-0834 flagged for re-analysis (contamination suspect)</div>
+            </div>
+            <div class="issue-time">4h ago</div>
+          </div>
+          <div class="issue-row">
+            <div class="issue-icon" style="background:var(--critical-bg)">⚠</div>
+            <div class="issue-content">
+              <div class="issue-title">Quality Issue: Reagent batch failure</div>
+              <div class="issue-detail">Batch #RGT-2024-11 showing high CV% — 8 tests affected</div>
+            </div>
+            <div class="issue-time">Yesterday</div>
+          </div>
+          <div class="issue-row">
+            <div class="issue-icon" style="background:var(--warning-bg)">↺</div>
+            <div class="issue-content">
+              <div class="issue-title">Complaint: Certificate format — AgroChem Ltd</div>
+              <div class="issue-detail">Client requested ISO 17025 format; standard format was issued</div>
+            </div>
+            <div class="issue-time">Yesterday</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: CUSTOMERS ═══ -->
+    <div class="page" id="page-customers">
+      <div>
+        <div class="page-title">Customer Intelligence</div>
+        <div class="page-subtitle">Revenue per customer, volume, and engagement metrics</div>
+      </div>
+      <div class="mini-stats">
+        <div class="mini-stat">
+          <div class="mini-stat-val" id="custActiveValue">142</div>
+          <div class="mini-stat-lbl" id="custActiveLabel">Active Customers</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" style="color:var(--positive)" id="custNewValue">+8</div>
+          <div class="mini-stat-lbl" id="custNewLabel">New This Month</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" style="color:var(--warning)" id="custReturningValue">5</div>
+          <div class="mini-stat-lbl" id="custReturningLabel">At Risk</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Top 10 Customers by Revenue (MTD)</div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr><th>#</th><th>Customer</th><th>Type</th><th>Samples</th><th>Revenue</th><th>Status</th></tr>
+          </thead>
+          <tbody id="customerTable"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Monthly Revenue by Customer (Top 8)</div></div>
+        <div class="chart-wrap" style="height:220px">
+          <canvas id="customerChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: SETTINGS ═══ -->
+    <div class="page" id="page-settings">
+      <div>
+        <div class="page-title">Settings</div>
+        <div class="page-subtitle">Dashboard preferences and configuration</div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px">Display</div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="signal-row">
+            <div>
+              <div class="signal-value">Theme</div>
+              <div class="signal-sub" style="text-align:left">Switch between light and dark mode</div>
+            </div>
+            <button onclick="toggleTheme()" style="padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-primary);font-family:'DM Sans',sans-serif;cursor:pointer;font-size:13px">Toggle Theme</button>
+          </div>
+          <div class="signal-row">
+            <div>
+              <div class="signal-value">Currency</div>
+              <div class="signal-sub" style="text-align:left">Display currency format</div>
+            </div>
+            <span style="font-size:13px;color:var(--text-secondary)">USD ($)</span>
+          </div>
+          <div class="signal-row">
+            <div>
+              <div class="signal-value">Alert Threshold</div>
+              <div class="signal-sub" style="text-align:left">Critical alert trigger count</div>
+            </div>
+            <span style="font-size:13px;color:var(--text-secondary)">> 0 items</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px">Data Sources</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="backlog-stat">
+            <div><div class="backlog-label">STINL Performance Data</div><div style="font-size:11px;color:var(--text-muted)">Last sync: 2 min ago</div></div>
+            <span style="color:var(--positive);font-weight:600;font-size:13px">● Live</span>
+          </div>
+          <div class="backlog-stat">
+            <div><div class="backlog-label">Customer & Revenue Data</div><div style="font-size:11px;color:var(--text-muted)">Last sync: 5 min ago</div></div>
+            <span style="color:var(--positive);font-weight:600;font-size:13px">● Live</span>
+          </div>
+          <div class="backlog-stat">
+            <div><div class="backlog-label">SLA & QA System</div><div style="font-size:11px;color:var(--text-muted)">Last sync: 8 min ago</div></div>
+            <span style="color:var(--positive);font-weight:600;font-size:13px">● Live</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── MOCK DATA ───────────────────────────────────────────
+const MOCK = {
+  D: {
+    revenue: 84240, forecast: 79180, projectedEOD: 123900,
+    fcProgress: 68,
+    throughputReceived: 312, throughputReleased: 294, throughput: 94.2,
+    alerts: 7, certErrors: 3, complaints: 2, quality: 2,
+    sparkData: [72000, 68000, 81000, 79000, 75000, 82000, 84240],
+    revForecast: {
+      labels: Array.from({length:7}, (_,i) => `Day ${i+1}`),
+      actual: [72000,68000,81000,79000,75000,82000,84240],
+      forecast: [75000,75000,75000,75000,75000,75000,79180]
+    },
+    efficiency: {
+      labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      samples: [280,305,267,312,298,241,312],
+      revenue: [68000,74000,65000,84000,72000,58000,84240]
+    }
+  },
+  M: {
+    revenue: 1240000, forecast: 1200000, projectedEOD: 1560000,
+    fcProgress: 80,
+    throughputReceived: 6420, throughputReleased: 6047, throughput: 94.2,
+    alerts: 12, certErrors: 5, complaints: 4, quality: 3,
+    sparkData: [960000,1080000,1120000,980000,1150000,1190000,1240000],
+    revForecast: {
+      labels: Array.from({length:12}, (_,i) => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][i]),
+      actual: [980000,1050000,1120000,1240000,null,null,null,null,null,null,null,null],
+      forecast: [980000,1000000,1100000,1200000,1200000,1200000,1200000,1200000,1200000,1200000,1200000,1200000]
+    },
+    efficiency: {
+      labels: Array.from({length:12}, (_,i) => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][i]),
+      samples: [5200,5400,5800,6420,5700,5900,6100,6400,5900,6200,6000,6420],
+      revenue: [980000,1050000,1100000,1240000,1000000,1080000,1120000,1180000,1050000,1150000,1100000,1200000]
+    }
+  },
+  Y: {
+    revenue: 14800000, forecast: 13500000, projectedEOD: 18200000,
+    fcProgress: 82,
+    throughputReceived: 74000, throughputReleased: 69700, throughput: 94.2,
+    alerts: 3, certErrors: 1, complaints: 1, quality: 1,
+    sparkData: [11000000,12200000,13100000,13800000,14200000,14500000,14800000],
+    revForecast: {
+      labels: ['2018','2019','2020','2021','2022','2023','2024'],
+      actual: [8200000,9400000,8800000,10200000,11800000,13200000,14800000],
+      forecast: [8500000,9000000,9500000,10500000,11500000,13000000,14000000]
+    },
+    efficiency: {
+      labels: ['2018','2019','2020','2021','2022','2023','2024'],
+      samples: [42000,48000,45000,55000,62000,68000,74000],
+      revenue: [8200000,9400000,8800000,10200000,11800000,13200000,14800000]
+    }
+  }
+};
+
+let currentFrame = 'D';
+let charts = {};
+const FRAME_META = {
+  D: { periodName: 'Daily', context: 'Today', compareText: 'vs yesterday' },
+  M: { periodName: 'Monthly', context: 'This Month', compareText: 'vs last month' },
+  Y: { periodName: 'Yearly', context: 'This Year', compareText: 'vs last year' }
+};
+const CUSTOMER_METRICS = {
+  D: { active: 31, newCount: 2, returning: 29, activeLabel: 'Active Customers (Today)', newLabel: 'New Today', returningLabel: 'Returning Today' },
+  M: { active: 142, newCount: 8, returning: 134, activeLabel: 'Active Customers (This Month)', newLabel: 'New This Month', returningLabel: 'Returning This Month' },
+  Y: { active: 526, newCount: 96, returning: 430, activeLabel: 'Active Customers (This Year)', newLabel: 'New This Year', returningLabel: 'Returning This Year' }
+};
+
+// ─── HELPERS ─────────────────────────────────────────────
+function fmt(n) {
+  if (n >= 1000000) return '$' + (n/1000000).toFixed(2) + 'M';
+  if (n >= 1000) return '$' + (n/1000).toFixed(1) + 'K';
+  return '$' + n.toLocaleString();
+}
+
+// ─── THEME ───────────────────────────────────────────────
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('themeBtn').textContent = isDark ? '🌙' : '☀️';
+  setTimeout(() => Object.values(charts).forEach(c => { if(c) c.update(); }), 50);
+}
+
+// ─── NAV ─────────────────────────────────────────────────
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+
+  // lazy init charts for pages
+  if (id === 'finance' && !charts.revForecast) initFinanceCharts();
+  if (id === 'performance' && !charts.slaDonut) initPerfCharts();
+  if (id === 'customers' && !charts.customerChart) initCustomerCharts();
+}
+
+// ─── TIME FRAME ──────────────────────────────────────────
+function setTimeFrame(f, btn) {
+  currentFrame = f;
+  document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateKPIs();
+  updateEfficiencyChart();
+  updateRevenueForecastChart();
+  updateTimeframeContext();
+}
+
+function updateKPIs() {
+  const d = MOCK[currentFrame];
+  const meta = FRAME_META[currentFrame];
+  document.getElementById('kpi-revenue').textContent = fmt(d.revenue);
+  document.getElementById('kpi-forecast').textContent = fmt(d.forecast);
+  document.getElementById('fc-actual-label').textContent = fmt(d.revenue);
+  document.getElementById('fc-projected').textContent = fmt(d.projectedEOD);
+  document.getElementById('fc-progress').style.width = d.fcProgress + '%';
+  document.getElementById('kpi-fc-period').textContent =
+    'Period: ' + (currentFrame === 'D' ? 'Daily' : currentFrame === 'M' ? 'Monthly' : 'Yearly');
+
+  const delta = ((d.revenue - d.forecast) / d.forecast * 100).toFixed(1);
+  const deltaEl = document.getElementById('kpi-rev-delta');
+  deltaEl.textContent = (delta > 0 ? '↑ ' : '↓ ') + Math.abs(delta) + '%';
+  deltaEl.className = 'kpi-delta ' + (delta > 0 ? 'up' : 'down');
+  document.getElementById('kpi-rev-sub').textContent = 'vs forecast (' + meta.periodName + ')';
+
+  document.getElementById('kpi-throughput').textContent = d.throughput + '%';
+  document.getElementById('tp-received').textContent = d.throughputReceived.toLocaleString();
+  document.getElementById('tp-released').textContent = d.throughputReleased.toLocaleString();
+
+  const totalAlerts = d.alerts;
+  document.getElementById('kpi-alerts').textContent = totalAlerts;
+
+  const alertCard = document.querySelector('.kpi-card.critical');
+  if (totalAlerts > 0) alertCard.classList.add('has-alerts');
+  else alertCard.classList.remove('has-alerts');
+
+  document.getElementById('alert-pills').innerHTML = `
+    <div class="alert-pill"><span class="count">${d.certErrors}</span> Cert. Errors</div>
+    <div class="alert-pill"><span class="count">${d.complaints}</span> Complaints</div>
+    <div class="alert-pill"><span class="count">${d.quality}</span> Quality</div>`;
+
+  // Update sparkline
+  if (charts.spark) {
+    charts.spark.data.datasets[0].data = d.sparkData;
+    charts.spark.update();
+  }
+}
+
+function updateRevenueForecastChart() {
+  if (!charts.revForecast) return;
+  const d = MOCK[currentFrame].revForecast;
+  charts.revForecast.data.labels = d.labels;
+  charts.revForecast.data.datasets[0].data = d.actual;
+  charts.revForecast.data.datasets[1].data = d.forecast;
+  charts.revForecast.update();
+}
+
+function updateTimeframeContext() {
+  const meta = FRAME_META[currentFrame];
+  const customer = CUSTOMER_METRICS[currentFrame];
+  document.getElementById('globalPeriodLabel').textContent =
+    'Viewing: ' + meta.context + ' (' + meta.periodName + ')';
+  document.getElementById('efficiencyPeriodTag').textContent = '(' + meta.periodName + ')';
+  document.getElementById('signalsPeriodTag').textContent = '(' + meta.context + ')';
+  document.getElementById('revForecastPeriodTag').textContent = '(' + meta.periodName + ')';
+
+  document.getElementById('newCustomersLabel').textContent = 'New Customers (' + meta.context + ')';
+  document.getElementById('topCustomerLabel').textContent = 'Top Customer (' + meta.context + ')';
+  document.getElementById('newCustomersValue').textContent = '+' + customer.newCount;
+  document.getElementById('newCustomersSub').textContent = meta.compareText;
+
+  document.getElementById('finRevenueValue').textContent = fmt(MOCK[currentFrame].revenue);
+  document.getElementById('finRevenueLabel').textContent = meta.context + ' Revenue';
+
+  document.getElementById('custActiveValue').textContent = customer.active.toLocaleString();
+  document.getElementById('custActiveLabel').textContent = customer.activeLabel;
+  document.getElementById('custNewValue').textContent = '+' + customer.newCount;
+  document.getElementById('custNewLabel').textContent = customer.newLabel;
+  document.getElementById('custReturningValue').textContent = customer.returning.toLocaleString();
+  document.getElementById('custReturningLabel').textContent = customer.returningLabel;
+}
+
+// ─── CHART HELPERS ───────────────────────────────────────
+function getColor(v) {
+  return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+}
+
+// ─── SPARKLINE ───────────────────────────────────────────
+function initSparkline() {
+  const ctx = document.getElementById('sparkRevenue').getContext('2d');
+  charts.spark = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: MOCK.D.sparkData.map((_,i) => i),
+      datasets: [{
+        data: MOCK.D.sparkData,
+        borderColor: '#059669',
+        borderWidth: 2,
+        fill: true,
+        backgroundColor: 'rgba(5,150,105,0.1)',
+        tension: 0.4,
+        pointRadius: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false } }
+    }
+  });
+}
+
+// ─── EFFICIENCY CHART ────────────────────────────────────
+function initEfficiencyChart() {
+  const ctx = document.getElementById('efficiencyChart').getContext('2d');
+  const d = MOCK.D.efficiency;
+  charts.efficiency = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [
+        {
+          label: 'Samples',
+          type: 'bar',
+          data: d.samples,
+          backgroundColor: 'rgba(30,58,138,0.18)',
+          borderColor: '#1E3A8A',
+          borderWidth: 1,
+          borderRadius: 4,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Revenue',
+          type: 'line',
+          data: d.revenue,
+          borderColor: '#059669',
+          backgroundColor: 'rgba(5,150,105,0.08)',
+          borderWidth: 2.5,
+          tension: 0.4,
+          pointRadius: 3,
+          pointBackgroundColor: '#059669',
+          fill: true,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          position: 'left',
+          grid: { color: 'rgba(148,163,184,0.12)' },
+          ticks: { color: '#94A3B8', font: { size: 11 }, maxTicksLimit: 5 }
+        },
+        y1: {
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: {
+            color: '#059669', font: { size: 11 }, maxTicksLimit: 5,
+            callback: v => '$' + (v/1000).toFixed(0) + 'K'
+          }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: '#94A3B8', font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+function updateEfficiencyChart() {
+  if (!charts.efficiency) return;
+  const d = MOCK[currentFrame].efficiency;
+  charts.efficiency.data.labels = d.labels;
+  charts.efficiency.data.datasets[0].data = d.samples;
+  charts.efficiency.data.datasets[1].data = d.revenue;
+  charts.efficiency.update();
+}
+
+// ─── FINANCE CHARTS ──────────────────────────────────────
+function initFinanceCharts() {
+  // Revenue vs Forecast
+  const ctx = document.getElementById('revForecastChart').getContext('2d');
+  const d = MOCK[currentFrame].revForecast;
+  charts.revForecast = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [
+        {
+          label: 'Actual',
+          data: d.actual,
+          borderColor: '#1E3A8A',
+          backgroundColor: 'rgba(30,58,138,0.12)',
+          borderWidth: 2.5,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: '#1E3A8A',
+          spanGaps: false
+        },
+        {
+          label: 'Forecast',
+          data: d.forecast,
+          borderColor: '#94A3B8',
+          borderDash: [6,3],
+          borderWidth: 2,
+          tension: 0.3,
+          fill: false,
+          pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { color: '#94A3B8', boxWidth: 12, font: { size: 12 } }
+        }
+      },
+      scales: {
+        y: {
+          grid: { color: 'rgba(148,163,184,0.12)' },
+          ticks: { color: '#94A3B8', font: { size: 11 }, callback: v => '$' + (v/1000).toFixed(0) + 'K' }
+        },
+        x: { grid: { display: false }, ticks: { color: '#94A3B8', font: { size: 11 } } }
+      }
+    }
+  });
+
+  // Segment Donut
+  const ctx2 = document.getElementById('segmentDonut').getContext('2d');
+  charts.segmentDonut = new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: ['Corporate','Hospital','Clinic','Individual'],
+      datasets: [{ data: [48,31,14,7], backgroundColor: ['#1E3A8A','#3B82F6','#93C5FD','#BFDBFE'], borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed + '%' } } }
+    }
+  });
+
+  // New vs Return Donut
+  const ctx3 = document.getElementById('newReturnDonut').getContext('2d');
+  charts.newReturnDonut = new Chart(ctx3, {
+    type: 'doughnut',
+    data: {
+      labels: ['Returning','New'],
+      datasets: [{ data: [78,22], backgroundColor: ['#059669','#6EE7B7'], borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+// ─── PERFORMANCE CHARTS ──────────────────────────────────
+function initPerfCharts() {
+  const ctx = document.getElementById('slaDonut').getContext('2d');
+  charts.slaDonut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['On-Time','Delayed'],
+      datasets: [{ data: [87.4,12.6], backgroundColor: ['#059669','#DC2626'], borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed.toFixed(1) + '%' } }
+      }
+    }
+  });
+
+  // Province bars
+  const provinces = [
+    { name: 'Capital', count: 98, max: 98 },
+    { name: 'Central', count: 72, max: 98 },
+    { name: 'Northern', count: 54, max: 98 },
+    { name: 'Eastern', count: 41, max: 98 },
+    { name: 'Western', count: 29, max: 98 },
+    { name: 'Southern', count: 18, max: 98 },
+  ];
+  const container = document.getElementById('provinceBars');
+  const colors = ['#1E3A8A','#2d52c4','#3B82F6','#60A5FA','#93C5FD','#BFDBFE'];
+  provinces.forEach((p, i) => {
+    const pct = (p.count / p.max * 100).toFixed(0);
+    container.innerHTML += `
+      <div class="province-item">
+        <div class="province-name">${p.name}</div>
+        <div class="province-bar-bg">
+          <div class="province-bar-fill" style="width:${pct}%;background:${colors[i]}">${pct}%</div>
+        </div>
+        <div class="province-count">${p.count}</div>
+      </div>`;
+  });
+}
+
+// ─── CUSTOMER CHARTS ─────────────────────────────────────
+function initCustomerCharts() {
+  const customers = [
+    { name: 'MegaCorp Ltd', type: 'Corporate', samples: 284, revenue: 41200, status: 'Active' },
+    { name: 'National Hospital', type: 'Hospital', samples: 241, revenue: 38400, status: 'Active' },
+    { name: 'PharmaCo Ind.', type: 'Corporate', samples: 198, revenue: 31800, status: 'Active' },
+    { name: 'AgroChem Ltd', type: 'Corporate', samples: 176, revenue: 28200, status: 'Active' },
+    { name: 'City General', type: 'Hospital', samples: 154, revenue: 24600, status: 'Active' },
+    { name: 'BioResearch X', type: 'Corporate', samples: 132, revenue: 21100, status: 'Active' },
+    { name: 'Regional Clinic A', type: 'Clinic', samples: 98, revenue: 15700, status: 'Active' },
+    { name: 'Univ. Medical Ctr', type: 'Hospital', samples: 87, revenue: 13900, status: 'Active' },
+    { name: 'Central Lab Co.', type: 'Corporate', samples: 72, revenue: 11500, status: 'Active' },
+    { name: 'Private Clinic Z', type: 'Clinic', samples: 58, revenue: 9300, status: 'Active' },
+  ];
+
+  const tbody = document.getElementById('customerTable');
+  customers.forEach((c, i) => {
+    tbody.innerHTML += `
+      <tr>
+        <td style="color:var(--text-muted);font-weight:600">${i+1}</td>
+        <td><strong>${c.name}</strong></td>
+        <td style="color:var(--text-secondary)">${c.type}</td>
+        <td>${c.samples.toLocaleString()}</td>
+        <td style="font-weight:600">$${c.revenue.toLocaleString()}</td>
+        <td><span class="risk-badge risk-low">Active</span></td>
+      </tr>`;
+  });
+
+  const ctx = document.getElementById('customerChart').getContext('2d');
+  charts.customerChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: customers.slice(0,8).map(c => c.name.split(' ')[0]),
+      datasets: [{
+        label: 'Revenue (MTD)',
+        data: customers.slice(0,8).map(c => c.revenue),
+        backgroundColor: customers.slice(0,8).map((_, i) =>
+          `rgba(30,58,138,${1 - i * 0.1})`),
+        borderRadius: 6,
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toLocaleString() } }
+      },
+      scales: {
+        y: {
+          grid: { color: 'rgba(148,163,184,0.12)' },
+          ticks: { color: '#94A3B8', font: { size: 11 }, callback: v => '$' + (v/1000).toFixed(0) + 'K' }
+        },
+        x: { grid: { display: false }, ticks: { color: '#94A3B8', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Set today's date
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('datePicker').value = today;
+
+  initSparkline();
+  initEfficiencyChart();
+  updateKPIs();
+  updateTimeframeContext();
+});
+</script>
+</body>
+</html>
