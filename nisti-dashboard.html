@@ -435,6 +435,9 @@
     background: var(--critical-bg);
     color: var(--critical);
   }
+  .alert-pill.actionable { cursor: pointer; transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition); }
+  .alert-pill.actionable:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+  .alert-pill.actionable.active { box-shadow: inset 0 0 0 2px var(--critical); }
   .alert-pill .count { font-size: 16px; font-weight: 700; }
 
   /* ── ROW 2 ── */
@@ -640,6 +643,16 @@
   .province-bar-bg { flex: 1; height: 18px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
   .province-bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; font-weight: 600; color: white; transition: width 1s ease; }
   .province-count { width: 40px; font-size: 12px; font-weight: 600; color: var(--text-primary); }
+  #rootCauseList {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  #rootCauseList .backlog-value {
+    white-space: normal;
+    word-break: break-word;
+    text-align: right;
+  }
 
   /* Mobile adjustments */
   @media (max-width: 1100px) {
@@ -725,6 +738,7 @@
     .date-picker { padding: 6px 10px; }
     .time-btn { padding: 6px 10px; }
     .mini-stats { grid-template-columns: 1fr; }
+    #rootCauseList { grid-template-columns: 1fr; }
     .data-table {
       display: block;
       overflow-x: auto;
@@ -828,12 +842,12 @@
     <div class="nav-item" onclick="showPage('finance', this)">
       <span class="nav-icon">◈</span>
       <span>Finance & Forecast</span>
-      <span class="nav-badge positive">+3.2%</span>
+      <span class="nav-badge positive" id="financeNavBadge">+3.2%</span>
     </div>
     <div class="nav-item" onclick="showPage('performance', this)">
       <span class="nav-icon">◎</span>
       <span>Performance & Lab</span>
-      <span class="nav-badge warning">47</span>
+      <span class="nav-badge warning" id="performanceNavBadge">47</span>
     </div>
     <div class="nav-item" onclick="showPage('customers', this)">
       <span class="nav-icon">◉</span>
@@ -867,6 +881,7 @@
     </label>
     <div class="time-toggle">
       <button class="time-btn active" onclick="setTimeFrame('D',this)">D</button>
+      <button class="time-btn" onclick="setTimeFrame('W',this)">W</button>
       <button class="time-btn" onclick="setTimeFrame('M',this)">M</button>
       <button class="time-btn" onclick="setTimeFrame('Y',this)">Y</button>
     </div>
@@ -966,21 +981,21 @@
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">SLA & Backlog</div>
+            <div class="card-title">SLA & Backlog <span class="period-tag" id="slaBacklogPeriodTag">(Daily)</span></div>
           </div>
           <div class="sla-grid">
             <div class="sla-item">
-              <div class="sla-val" style="color:var(--positive)">87.4%</div>
+              <div class="sla-val" style="color:var(--positive)" id="slaOnTimeValue">87.4%</div>
               <div class="sla-lbl">On-Time</div>
               <div class="progress-bar">
-                <div class="progress-fill" style="width:87.4%;background:var(--positive)"></div>
+                <div class="progress-fill" id="slaOnTimeBar" style="width:87.4%;background:var(--positive)"></div>
               </div>
             </div>
             <div class="sla-item">
-              <div class="sla-val" style="color:var(--critical)">12.6%</div>
+              <div class="sla-val" style="color:var(--critical)" id="slaDelayedValue">12.6%</div>
               <div class="sla-lbl">Delayed</div>
               <div class="progress-bar">
-                <div class="progress-fill" style="width:12.6%;background:var(--critical)"></div>
+                <div class="progress-fill" id="slaDelayedBar" style="width:12.6%;background:var(--critical)"></div>
               </div>
             </div>
           </div>
@@ -991,7 +1006,7 @@
                 <div style="font-size:11px;color:var(--text-muted)">In backlog</div>
               </div>
               <div>
-                <div class="backlog-value" style="color:var(--warning)">47</div>
+                <div class="backlog-value" style="color:var(--warning)" id="pendingSamplesValue">47</div>
                 <div style="font-size:11px;color:var(--text-muted);text-align:right">samples</div>
               </div>
             </div>
@@ -999,7 +1014,7 @@
               <div>
                 <div class="backlog-label">Avg. Processing Time</div>
               </div>
-              <div class="backlog-value" style="color:var(--text-primary)">18h</div>
+              <div class="backlog-value" style="color:var(--text-primary)" id="avgProcTimeValue">18h</div>
             </div>
           </div>
         </div>
@@ -1104,9 +1119,9 @@
         <div class="card-header">
           <div class="card-title">Revenue vs Forecast <span class="period-tag" id="revForecastPeriodTag">(Daily)</span></div>
           <div class="segment-ctrl">
-            <button class="seg-btn active">Monthly</button>
-            <button class="seg-btn">Quarterly</button>
-            <button class="seg-btn">Yearly</button>
+            <button class="seg-btn active" onclick="setFinanceResolution('Monthly', this)">Monthly</button>
+            <button class="seg-btn" onclick="setFinanceResolution('Quarterly', this)">Quarterly</button>
+            <button class="seg-btn" onclick="setFinanceResolution('Yearly', this)">Yearly</button>
           </div>
         </div>
         <div class="chart-wrap" style="height:200px">
@@ -1117,57 +1132,25 @@
       <div class="grid-2">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">Revenue by Customer Type</div>
+            <div class="card-title">Revenue by Customer Type <span class="period-tag" id="revByTypePeriodTag">(Daily)</span></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center">
             <div style="height:160px;position:relative">
               <canvas id="segmentDonut"></canvas>
             </div>
-            <div class="donut-legend">
-              <div class="legend-item">
-                <div class="legend-dot" style="background:#1E3A8A"></div>
-                <div class="legend-label">Corporate</div>
-                <div class="legend-val">48%</div>
-              </div>
-              <div class="legend-item">
-                <div class="legend-dot" style="background:#3B82F6"></div>
-                <div class="legend-label">Hospital</div>
-                <div class="legend-val">31%</div>
-              </div>
-              <div class="legend-item">
-                <div class="legend-dot" style="background:#93C5FD"></div>
-                <div class="legend-label">Clinic</div>
-                <div class="legend-val">14%</div>
-              </div>
-              <div class="legend-item">
-                <div class="legend-dot" style="background:#BFDBFE"></div>
-                <div class="legend-label">Individual</div>
-                <div class="legend-val">7%</div>
-              </div>
-            </div>
+            <div class="donut-legend" id="segmentDonutLegend"></div>
           </div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">New vs Returning Customers</div>
+            <div class="card-title">New vs Returning Customers <span class="period-tag" id="newReturnPeriodTag">(Daily)</span></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center">
             <div style="height:160px;position:relative">
               <canvas id="newReturnDonut"></canvas>
             </div>
-            <div class="donut-legend">
-              <div class="legend-item">
-                <div class="legend-dot" style="background:#059669"></div>
-                <div class="legend-label">Returning</div>
-                <div class="legend-val">78%</div>
-              </div>
-              <div class="legend-item">
-                <div class="legend-dot" style="background:#6EE7B7"></div>
-                <div class="legend-label">New</div>
-                <div class="legend-val">22%</div>
-              </div>
-            </div>
+            <div class="donut-legend" id="newReturnDonutLegend"></div>
           </div>
         </div>
       </div>
@@ -1238,49 +1221,49 @@
       <div class="grid-2">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">Throughput Funnel</div>
+            <div class="card-title">Throughput Funnel <span class="period-tag" id="funnelPeriodTag">(Daily)</span></div>
           </div>
           <div class="funnel-step">
             <div class="funnel-bar-wrap">
-              <div class="funnel-bar" style="width:100%;background:var(--navy)">Received</div>
+              <div class="funnel-bar" id="funnelReceivedBar" style="width:100%;background:var(--navy)">Received</div>
             </div>
             <div class="funnel-meta">
-              <div class="funnel-num">312</div>
-              <div class="funnel-pct">100%</div>
-            </div>
-          </div>
-          <div class="funnel-step">
-            <div class="funnel-bar-wrap">
-              <div class="funnel-bar" style="width:87%;background:var(--navy-light)">Processing</div>
-            </div>
-            <div class="funnel-meta">
-              <div class="funnel-num">272</div>
-              <div class="funnel-pct">87.2%</div>
+              <div class="funnel-num" id="funnelReceivedNum">312</div>
+              <div class="funnel-pct" id="funnelReceivedPct">100%</div>
             </div>
           </div>
           <div class="funnel-step">
             <div class="funnel-bar-wrap">
-              <div class="funnel-bar" style="width:94%;background:var(--positive)">Released</div>
+              <div class="funnel-bar" id="funnelProcessingBar" style="width:87%;background:var(--navy-light)">Processing</div>
             </div>
             <div class="funnel-meta">
-              <div class="funnel-num">294</div>
-              <div class="funnel-pct">94.2%</div>
+              <div class="funnel-num" id="funnelProcessingNum">272</div>
+              <div class="funnel-pct" id="funnelProcessingPct">87.2%</div>
+            </div>
+          </div>
+          <div class="funnel-step">
+            <div class="funnel-bar-wrap">
+              <div class="funnel-bar" id="funnelReleasedBar" style="width:94%;background:var(--positive)">Released</div>
+            </div>
+            <div class="funnel-meta">
+              <div class="funnel-num" id="funnelReleasedNum">294</div>
+              <div class="funnel-pct" id="funnelReleasedPct">94.2%</div>
             </div>
           </div>
           <div class="funnel-step" style="border:none">
             <div class="funnel-bar-wrap">
-              <div class="funnel-bar" style="width:15%;background:var(--warning)">Pending</div>
+              <div class="funnel-bar" id="funnelPendingBar" style="width:15%;background:var(--warning)">Pending</div>
             </div>
             <div class="funnel-meta">
-              <div class="funnel-num" style="color:var(--warning)">47</div>
-              <div class="funnel-pct">15.1%</div>
+              <div class="funnel-num" id="funnelPendingNum" style="color:var(--warning)">47</div>
+              <div class="funnel-pct" id="funnelPendingPct">15.1%</div>
             </div>
           </div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">SLA Performance</div>
+            <div class="card-title">SLA Performance <span class="period-tag" id="slaDonutPeriodTag">(Daily)</span></div>
           </div>
           <div style="height:180px;position:relative">
             <canvas id="slaDonut"></canvas>
@@ -1289,12 +1272,12 @@
             <div class="legend-item">
               <div class="legend-dot" style="background:var(--positive)"></div>
               <div class="legend-label">On-Time</div>
-              <div class="legend-val">87.4%</div>
+              <div class="legend-val" id="slaLegendOnTime">87.4%</div>
             </div>
             <div class="legend-item">
               <div class="legend-dot" style="background:var(--critical)"></div>
               <div class="legend-label">Delayed</div>
-              <div class="legend-val">12.6%</div>
+              <div class="legend-val" id="slaLegendDelayed">12.6%</div>
             </div>
           </div>
         </div>
@@ -1347,43 +1330,18 @@
 
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Issue Log</div>
-          <span class="card-badge risk-medium">4 Open</span>
+          <div class="card-title">Issue Log <span class="period-tag" id="issueLogPeriodTag">(Daily)</span></div>
+          <span class="card-badge risk-medium" id="issueLogOpenBadge">0 Open</span>
         </div>
-        <div>
-          <div class="issue-row">
-            <div class="issue-icon" style="background:var(--critical-bg)">⚠</div>
-            <div class="issue-content">
-              <div class="issue-title">Complaint: Delayed result — MegaCorp Ltd</div>
-              <div class="issue-detail">Customer reported 96h delay on urgent biochemistry panel</div>
-            </div>
-            <div class="issue-time">2h ago</div>
-          </div>
-          <div class="issue-row">
-            <div class="issue-icon" style="background:var(--warning-bg)">↺</div>
-            <div class="issue-content">
-              <div class="issue-title">Repeated Request: Retest — National Hospital</div>
-              <div class="issue-detail">Sample #SMP-0834 flagged for re-analysis (contamination suspect)</div>
-            </div>
-            <div class="issue-time">4h ago</div>
-          </div>
-          <div class="issue-row">
-            <div class="issue-icon" style="background:var(--critical-bg)">⚠</div>
-            <div class="issue-content">
-              <div class="issue-title">Quality Issue: Reagent batch failure</div>
-              <div class="issue-detail">Batch #RGT-2024-11 showing high CV% — 8 tests affected</div>
-            </div>
-            <div class="issue-time">Yesterday</div>
-          </div>
-          <div class="issue-row">
-            <div class="issue-icon" style="background:var(--warning-bg)">↺</div>
-            <div class="issue-content">
-              <div class="issue-title">Complaint: Certificate format — AgroChem Ltd</div>
-              <div class="issue-detail">Client requested ISO 17025 format; standard format was issued</div>
-            </div>
-            <div class="issue-time">Yesterday</div>
-          </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px" id="issueLogFilterText">Showing: All issues</div>
+        <div id="issueLogList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Root Cause Summary <span class="period-tag" id="rootCausePeriodTag">(Daily)</span></div>
         </div>
+        <div id="rootCauseList"></div>
       </div>
     </div>
 
@@ -1399,12 +1357,49 @@
           <div class="mini-stat-lbl" id="custActiveLabel">Active Customers</div>
         </div>
         <div class="mini-stat">
+          <div class="mini-stat-val" id="custYesterdayValue">139</div>
+          <div class="mini-stat-lbl" id="custYesterdayLabel">Total Customers (Yesterday)</div>
+        </div>
+        <div class="mini-stat">
           <div class="mini-stat-val" style="color:var(--positive)" id="custNewValue">+8</div>
           <div class="mini-stat-lbl" id="custNewLabel">New This Month</div>
         </div>
         <div class="mini-stat">
           <div class="mini-stat-val" style="color:var(--warning)" id="custReturningValue">5</div>
           <div class="mini-stat-lbl" id="custReturningLabel">At Risk</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Customer Snapshot <span class="period-tag" id="customerSnapshotPeriodTag">(Daily)</span></div>
+        </div>
+        <div class="grid-3">
+          <div class="mini-stat">
+            <div class="mini-stat-val" id="custTodayValue">142</div>
+            <div class="mini-stat-lbl">Total Customers (Selected Day)</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-val" id="custMonthTotalValue">142</div>
+            <div class="mini-stat-lbl">Total Customers (This Month)</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-val" id="custHighVolumeValue">6</div>
+            <div class="mini-stat-lbl">High Sample Volume Customers</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-val" id="custAllTimeValue">0</div>
+            <div class="mini-stat-lbl" id="custAllTimeLabel">Total Customers Since Start</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:14px">
+          <div class="backlog-stat" style="flex:1;min-width:240px">
+            <div><div class="backlog-label">Customers with Rush/Urgent Samples</div><div style="font-size:11px;color:var(--text-muted)">count</div></div>
+            <div class="backlog-value" id="custRushCount" style="color:var(--critical)">0</div>
+          </div>
+          <div class="backlog-stat" style="flex:1;min-width:240px">
+            <div><div class="backlog-label">Customer Complaints</div><div style="font-size:11px;color:var(--text-muted)">in selected period</div></div>
+            <div class="backlog-value" id="custComplaintsCount" style="color:var(--warning)">0</div>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -1459,7 +1454,11 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-title" style="margin-bottom:16px">Data Sources</div>
+        <div class="card-title" style="margin-bottom:6px">Data Sources</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.4">
+          These are the systems feeding this dashboard. “Live” means the dashboard is reading the latest available data; “Last sync” is when we last refreshed.
+          In a real deployment, each source would map to a database/API (LIMS, billing/ERP, CRM, SLA/QA).
+        </div>
         <div style="display:flex;flex-direction:column;gap:10px">
           <div class="backlog-stat">
             <div><div class="backlog-label">STINL Performance Data</div><div style="font-size:11px;color:var(--text-muted)">Last sync: 2 min ago</div></div>
@@ -1481,79 +1480,344 @@
 </div>
 
 <script>
-// ─── MOCK DATA ───────────────────────────────────────────
-const MOCK = {
-  D: {
-    revenue: 84240, forecast: 79180, projectedEOD: 123900,
-    fcProgress: 68,
-    throughputReceived: 312, throughputReleased: 294, throughput: 94.2,
-    alerts: 7, certErrors: 3, complaints: 2, quality: 2,
-    sparkData: [72000, 68000, 81000, 79000, 75000, 82000, 84240],
-    revForecast: {
-      labels: Array.from({length:7}, (_,i) => `Day ${i+1}`),
-      actual: [72000,68000,81000,79000,75000,82000,84240],
-      forecast: [75000,75000,75000,75000,75000,75000,79180]
-    },
-    efficiency: {
-      labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-      samples: [280,305,267,312,298,241,312],
-      revenue: [68000,74000,65000,84000,72000,58000,84240]
-    }
-  },
-  M: {
-    revenue: 1240000, forecast: 1200000, projectedEOD: 1560000,
-    fcProgress: 80,
-    throughputReceived: 6420, throughputReleased: 6047, throughput: 94.2,
-    alerts: 12, certErrors: 5, complaints: 4, quality: 3,
-    sparkData: [960000,1080000,1120000,980000,1150000,1190000,1240000],
-    revForecast: {
-      labels: Array.from({length:12}, (_,i) => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][i]),
-      actual: [980000,1050000,1120000,1240000,null,null,null,null,null,null,null,null],
-      forecast: [980000,1000000,1100000,1200000,1200000,1200000,1200000,1200000,1200000,1200000,1200000,1200000]
-    },
-    efficiency: {
-      labels: Array.from({length:12}, (_,i) => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][i]),
-      samples: [5200,5400,5800,6420,5700,5900,6100,6400,5900,6200,6000,6420],
-      revenue: [980000,1050000,1100000,1240000,1000000,1080000,1120000,1180000,1050000,1150000,1100000,1200000]
-    }
-  },
-  Y: {
-    revenue: 14800000, forecast: 13500000, projectedEOD: 18200000,
-    fcProgress: 82,
-    throughputReceived: 74000, throughputReleased: 69700, throughput: 94.2,
-    alerts: 3, certErrors: 1, complaints: 1, quality: 1,
-    sparkData: [11000000,12200000,13100000,13800000,14200000,14500000,14800000],
-    revForecast: {
-      labels: ['2018','2019','2020','2021','2022','2023','2024'],
-      actual: [8200000,9400000,8800000,10200000,11800000,13200000,14800000],
-      forecast: [8500000,9000000,9500000,10500000,11500000,13000000,14000000]
-    },
-    efficiency: {
-      labels: ['2018','2019','2020','2021','2022','2023','2024'],
-      samples: [42000,48000,45000,55000,62000,68000,74000],
-      revenue: [8200000,9400000,8800000,10200000,11800000,13200000,14800000]
-    }
-  }
+// ─── DATA ENGINE (MOCK, FILTERABLE) ───────────────────────
+let currentFrame = 'D'; // D/W/M/Y controls global aggregation window
+let selectedDate = null; // yyyy-mm-dd
+let financeResolution = 'Monthly'; // Monthly/Quarterly/Yearly (finance chart grouping)
+let currentAlertFilter = 'all'; // all|certErrors|dataEntryErrors|qualityIssues|repeatedRequests|complaints
+let charts = {};
+
+const TYPES = ['Corporate', 'Hospital', 'Clinic', 'Individual'];
+const PROVINCES = ['Capital', 'Central', 'Northern', 'Eastern', 'Western', 'Southern'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const FRAME_META = {
+  D: { periodName: 'Daily', context: 'Selected Day', compareText: 'vs previous day' },
+  W: { periodName: 'Weekly', context: 'Selected Week', compareText: 'vs previous week' },
+  M: { periodName: 'Monthly', context: 'Selected Month', compareText: 'vs previous month' },
+  Y: { periodName: 'Yearly', context: 'Selected Year', compareText: 'vs previous year' }
 };
 
-let currentFrame = 'D';
-let charts = {};
-const FRAME_META = {
-  D: { periodName: 'Daily', context: 'Today', compareText: 'vs yesterday' },
-  M: { periodName: 'Monthly', context: 'This Month', compareText: 'vs last month' },
-  Y: { periodName: 'Yearly', context: 'This Year', compareText: 'vs last year' }
+const STORE = {
+  // keyed by yyyy-mm-dd -> day record
+  daily: new Map(),
+  // stable customer list used for "Top customers" table/chart
+  customers: []
 };
-const CUSTOMER_METRICS = {
-  D: { active: 31, newCount: 2, returning: 29, activeLabel: 'Active Customers (Today)', newLabel: 'New Today', returningLabel: 'Returning Today' },
-  M: { active: 142, newCount: 8, returning: 134, activeLabel: 'Active Customers (This Month)', newLabel: 'New This Month', returningLabel: 'Returning This Month' },
-  Y: { active: 526, newCount: 96, returning: 430, activeLabel: 'Active Customers (This Year)', newLabel: 'New This Year', returningLabel: 'Returning This Year' }
-};
+const CUSTOMER_BASELINE = 860;
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function parseISODate(s) {
+  const [y,m,dd] = s.split('-').map(Number);
+  return new Date(y, m-1, dd);
+}
+function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function addDays(d, days) { const x = new Date(d); x.setDate(x.getDate() + days); return x; }
+function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+function mulberry32(seed) {
+  let t = seed >>> 0;
+  return function() {
+    t += 0x6D2B79F5;
+    let x = Math.imul(t ^ (t >>> 15), 1 | t);
+    x ^= x + Math.imul(x ^ (x >>> 7), 61 | x);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashStr(s) {
+  let h = 2166136261;
+  for (let i=0;i<s.length;i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function weekStartMonday(d) {
+  // Monday=1 ... Sunday=0 in JS getDay(); normalize so Monday start
+  const day = d.getDay(); // 0..6
+  const diff = (day === 0 ? -6 : 1 - day);
+  return startOfDay(addDays(d, diff));
+}
+
+function quarterOfMonth(m0) { return Math.floor(m0 / 3) + 1; }
+
+function buildMockCustomers() {
+  // stable set; volumes and revenue will be re-aggregated by day window
+  const base = [
+    { name: 'MegaCorp Ltd', type: 'Corporate', province: 'Capital' },
+    { name: 'National Hospital', type: 'Hospital', province: 'Central' },
+    { name: 'PharmaCo Industries', type: 'Corporate', province: 'Capital' },
+    { name: 'AgroChem Ltd', type: 'Corporate', province: 'Northern' },
+    { name: 'City General Hospital', type: 'Hospital', province: 'Eastern' },
+    { name: 'BioResearch X', type: 'Corporate', province: 'Western' },
+    { name: 'Regional Clinic A', type: 'Clinic', province: 'Central' },
+    { name: 'Univ. Medical Ctr', type: 'Hospital', province: 'Capital' },
+    { name: 'Central Lab Co.', type: 'Corporate', province: 'Southern' },
+    { name: 'Private Clinic Z', type: 'Clinic', province: 'Eastern' },
+    { name: 'Research Institute X', type: 'Corporate', province: 'Northern' },
+    { name: 'Regional Clinic B', type: 'Clinic', province: 'Western' },
+    { name: 'Individual Walk-ins', type: 'Individual', province: 'Capital' }
+  ];
+  STORE.customers = base.map((c, idx) => ({ id: idx+1, ...c }));
+}
+
+function generateDailyMockData(anchorISO) {
+  // Generate ~2.5 years of daily data around anchor, so date picker can go to past.
+  const anchor = parseISODate(anchorISO);
+  const start = addDays(anchor, -900);
+  const end = addDays(anchor, 30);
+  STORE.daily.clear();
+  if (!STORE.customers.length) buildMockCustomers();
+
+  for (let d = startOfDay(start); d <= end; d = addDays(d, 1)) {
+    const iso = toISODate(d);
+    const rand = mulberry32(hashStr(iso));
+    const dow = d.getDay(); // 0 Sun .. 6 Sat
+    const weekendFactor = (dow === 0 || dow === 6) ? 0.72 : 1.0;
+    const seasonal = 1 + 0.12 * Math.sin((2 * Math.PI * (d.getMonth()+1)) / 12);
+    const received = Math.round((260 + rand()*90) * weekendFactor * seasonal);
+    const urgent = Math.round(received * (0.02 + rand()*0.04));
+    const onTimeRate = clamp(0.84 + (rand()-0.5)*0.08, 0.70, 0.96);
+    const released = Math.round(received * clamp(0.90 + (rand()-0.5)*0.08, 0.75, 0.98));
+    const pending = Math.max(0, received - released + Math.round(rand()*15));
+    const onTime = Math.round(released * onTimeRate);
+    const delayed = Math.max(0, released - onTime);
+
+    const certErrors = Math.round(rand()*3 + (delayed > 25 ? 1 : 0));
+    const dataEntryErrors = Math.round(rand()*6);
+    const qualityIssues = Math.round(rand()*2 + (rand() > 0.92 ? 2 : 0));
+    const repeatedRequests = Math.round(rand()*3);
+    const complaints = Math.round(rand()*2 + (delayed > 35 ? 2 : 0));
+
+    // Finance
+    const avgRevPerSample = 240 + rand()*80; // $240-$320
+    const revenue = Math.round(released * avgRevPerSample);
+    const forecast = Math.round(revenue * clamp(0.92 + rand()*0.12, 0.85, 1.15));
+
+    // Customer composition per day (percent split)
+    const corporatePct = clamp(0.42 + (rand()-0.5)*0.10, 0.30, 0.55);
+    const hospitalPct = clamp(0.32 + (rand()-0.5)*0.08, 0.20, 0.45);
+    const clinicPct = clamp(0.18 + (rand()-0.5)*0.06, 0.10, 0.30);
+    const individualPct = clamp(1 - corporatePct - hospitalPct - clinicPct, 0.03, 0.15);
+    const typeSplit = {
+      Corporate: corporatePct,
+      Hospital: hospitalPct,
+      Clinic: clinicPct,
+      Individual: individualPct
+    };
+
+    // Provinces workload split (counts of received)
+    const provCounts = {};
+    let remaining = received;
+    // Capital usually largest but not always 100%
+    const weights = PROVINCES.map((p) => {
+      const baseW = p === 'Capital' ? 1.55 : p === 'Central' ? 1.25 : 1.0;
+      return baseW * (0.8 + rand()*0.6);
+    });
+    const wSum = weights.reduce((a,b)=>a+b,0);
+    PROVINCES.forEach((p, i) => {
+      const val = i === PROVINCES.length - 1
+        ? remaining
+        : Math.round(received * (weights[i] / wSum));
+      provCounts[p] = val;
+      remaining -= val;
+    });
+
+    // Customer totals (toy model)
+    const baseCustomersToday = Math.round(120 + 10*Math.sin((2*Math.PI*(d.getMonth()+1))/12) + rand()*18);
+    const newCustomers = Math.round(rand()*3);
+    const returningCustomers = Math.max(0, baseCustomersToday - newCustomers);
+    const highVolumeCustomers = Math.round(4 + rand()*6);
+    const rushCustomers = Math.round(rand()*5 + urgent/10);
+
+    STORE.daily.set(iso, {
+      dateISO: iso,
+      samplesReceived: received,
+      samplesReleased: released,
+      samplesPending: pending,
+      onTime,
+      delayed,
+      urgent,
+      certErrors,
+      dataEntryErrors,
+      qualityIssues,
+      repeatedRequests,
+      complaints,
+      revenue,
+      forecastRevenue: forecast,
+      typeSplit,
+      provinceCounts: provCounts,
+      customers: {
+        total: baseCustomersToday,
+        newCustomers,
+        returningCustomers,
+        highVolumeCustomers,
+        rushCustomers
+      }
+    });
+  }
+}
 
 // ─── HELPERS ─────────────────────────────────────────────
 function fmt(n) {
   if (n >= 1000000) return '$' + (n/1000000).toFixed(2) + 'M';
   if (n >= 1000) return '$' + (n/1000).toFixed(1) + 'K';
   return '$' + n.toLocaleString();
+}
+
+function fmtPct(n, digits = 1) {
+  return `${Number(n).toFixed(digits)}%`;
+}
+function fmtCompact(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+  return String(Math.round(n));
+}
+
+function safeEl(id) { return document.getElementById(id); }
+function setText(id, txt) { const el = safeEl(id); if (el) el.textContent = txt; }
+
+function getPeriodRange(frame, anchorISO) {
+  const d = startOfDay(parseISODate(anchorISO));
+  if (frame === 'D') {
+    const s = startOfDay(d);
+    return { start: s, end: s };
+  }
+  if (frame === 'W') {
+    const s = weekStartMonday(d);
+    const e = addDays(s, 6);
+    return { start: s, end: e };
+  }
+  if (frame === 'M') {
+    const s = new Date(d.getFullYear(), d.getMonth(), 1);
+    const e = new Date(d.getFullYear(), d.getMonth()+1, 0);
+    return { start: startOfDay(s), end: startOfDay(e) };
+  }
+  if (frame === 'Y') {
+    const s = new Date(d.getFullYear(), 0, 1);
+    const e = new Date(d.getFullYear(), 11, 31);
+    return { start: startOfDay(s), end: startOfDay(e) };
+  }
+  // fallback
+  const s = startOfDay(d);
+  return { start: s, end: s };
+}
+
+function enumerateRangeISO(start, end) {
+  const out = [];
+  for (let d = startOfDay(start); d <= end; d = addDays(d, 1)) out.push(toISODate(d));
+  return out;
+}
+
+function getStoreDateBounds() {
+  const keys = Array.from(STORE.daily.keys()).sort();
+  if (!keys.length) return null;
+  return { startISO: keys[0], endISO: keys[keys.length - 1] };
+}
+
+function getAllTimeCustomerBase(anchorISO) {
+  const bounds = getStoreDateBounds();
+  if (!bounds) return CUSTOMER_BASELINE;
+  const start = parseISODate(bounds.startISO);
+  const end = parseISODate(anchorISO < bounds.endISO ? anchorISO : bounds.endISO);
+  let cumulativeNew = 0;
+  enumerateRangeISO(start, end).forEach(iso => {
+    const row = STORE.daily.get(iso);
+    if (row) cumulativeNew += row.customers.newCustomers || 0;
+  });
+  return CUSTOMER_BASELINE + cumulativeNew;
+}
+
+function aggregateWindow(frame, anchorISO) {
+  const { start, end } = getPeriodRange(frame, anchorISO);
+  const dates = enumerateRangeISO(start, end).filter(iso => STORE.daily.has(iso));
+  const sum = (arr, fn) => arr.reduce((a, x) => a + fn(x), 0);
+  const rows = dates.map(iso => STORE.daily.get(iso));
+
+  const samplesReceived = sum(rows, r => r.samplesReceived);
+  const samplesReleased = sum(rows, r => r.samplesReleased);
+  const samplesPending = sum(rows, r => r.samplesPending);
+  const onTime = sum(rows, r => r.onTime);
+  const delayed = sum(rows, r => r.delayed);
+  const urgent = sum(rows, r => r.urgent);
+
+  const certErrors = sum(rows, r => r.certErrors);
+  const dataEntryErrors = sum(rows, r => r.dataEntryErrors);
+  const qualityIssues = sum(rows, r => r.qualityIssues);
+  const repeatedRequests = sum(rows, r => r.repeatedRequests);
+  const complaints = sum(rows, r => r.complaints);
+
+  const revenue = sum(rows, r => r.revenue);
+  const forecast = sum(rows, r => r.forecastRevenue);
+
+  // customer metrics
+  const customersTotal = Math.round(sum(rows, r => r.customers.total) / Math.max(1, rows.length));
+  const newCustomers = sum(rows, r => r.customers.newCustomers);
+  const returningCustomers = Math.max(0, customersTotal - Math.round(newCustomers / Math.max(1, rows.length)));
+  const highVolumeCustomers = Math.round(sum(rows, r => r.customers.highVolumeCustomers) / Math.max(1, rows.length));
+  const rushCustomers = sum(rows, r => r.customers.rushCustomers);
+
+  // type revenue split: weight by revenue
+  const typeRevenue = {};
+  TYPES.forEach(t => (typeRevenue[t] = 0));
+  rows.forEach(r => {
+    TYPES.forEach(t => { typeRevenue[t] += r.revenue * (r.typeSplit[t] || 0); });
+  });
+
+  // provinces workload
+  const provinceCounts = {};
+  PROVINCES.forEach(p => (provinceCounts[p] = 0));
+  rows.forEach(r => {
+    PROVINCES.forEach(p => { provinceCounts[p] += r.provinceCounts[p] || 0; });
+  });
+
+  const onTimePct = samplesReleased > 0 ? (onTime / samplesReleased) * 100 : 0;
+  const delayedPct = 100 - onTimePct;
+
+  // throughput (released/received)
+  const throughputPct = samplesReceived > 0 ? (samplesReleased / samplesReceived) * 100 : 0;
+  // avg processing time proxy based on backlog
+  const avgProcHours = clamp(12 + (samplesPending / Math.max(1, samplesReceived)) * 40, 8, 48);
+
+  return {
+    frame,
+    anchorISO,
+    range: { startISO: toISODate(start), endISO: toISODate(end) },
+    samplesReceived,
+    samplesReleased,
+    samplesPending,
+    onTimePct,
+    delayedPct,
+    urgent,
+    certErrors,
+    dataEntryErrors,
+    qualityIssues,
+    repeatedRequests,
+    complaints,
+    revenue,
+    forecast,
+    throughputPct,
+    avgProcHours,
+    customers: {
+      total: customersTotal,
+      newCustomers,
+      returningCustomers,
+      highVolumeCustomers,
+      rushCustomers
+    },
+    typeRevenue,
+    provinceCounts
+  };
+}
+
+function previousAnchorISO(frame, anchorISO) {
+  const d = parseISODate(anchorISO);
+  if (frame === 'D') return toISODate(addDays(d, -1));
+  if (frame === 'W') return toISODate(addDays(d, -7));
+  if (frame === 'M') return toISODate(new Date(d.getFullYear(), d.getMonth()-1, Math.min(d.getDate(), 28)));
+  if (frame === 'Y') return toISODate(new Date(d.getFullYear()-1, d.getMonth(), d.getDate()));
+  return toISODate(addDays(d, -1));
 }
 
 // ─── THEME ───────────────────────────────────────────────
@@ -1575,6 +1839,9 @@ function showPage(id, el) {
   if (id === 'finance' && !charts.revForecast) initFinanceCharts();
   if (id === 'performance' && !charts.slaDonut) initPerfCharts();
   if (id === 'customers' && !charts.customerChart) initCustomerCharts();
+
+  // ensure widgets render with current filters after init
+  setTimeout(() => refreshAll(), 0);
 }
 
 // ─── TIME FRAME ──────────────────────────────────────────
@@ -1582,84 +1849,145 @@ function setTimeFrame(f, btn) {
   currentFrame = f;
   document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  updateKPIs();
-  updateEfficiencyChart();
-  updateRevenueForecastChart();
-  updateTimeframeContext();
+  refreshAll();
 }
 
-function updateKPIs() {
-  const d = MOCK[currentFrame];
+function getSparkSeries(anchorISO) {
+  // Always show last 7 days ending at anchor.
+  const end = startOfDay(parseISODate(anchorISO));
+  const start = addDays(end, -6);
+  const dates = enumerateRangeISO(start, end).filter(iso => STORE.daily.has(iso));
+  return dates.map(iso => STORE.daily.get(iso).revenue);
+}
+
+function updateOverviewAndContext() {
   const meta = FRAME_META[currentFrame];
-  document.getElementById('kpi-revenue').textContent = fmt(d.revenue);
-  document.getElementById('kpi-forecast').textContent = fmt(d.forecast);
-  document.getElementById('fc-actual-label').textContent = fmt(d.revenue);
-  document.getElementById('fc-projected').textContent = fmt(d.projectedEOD);
-  document.getElementById('fc-progress').style.width = d.fcProgress + '%';
-  document.getElementById('kpi-fc-period').textContent =
-    'Period: ' + (currentFrame === 'D' ? 'Daily' : currentFrame === 'M' ? 'Monthly' : 'Yearly');
+  const agg = aggregateWindow(currentFrame, selectedDate);
+  const prev = aggregateWindow(currentFrame, previousAnchorISO(currentFrame, selectedDate));
 
-  const delta = ((d.revenue - d.forecast) / d.forecast * 100).toFixed(1);
-  const deltaEl = document.getElementById('kpi-rev-delta');
-  deltaEl.textContent = (delta > 0 ? '↑ ' : '↓ ') + Math.abs(delta) + '%';
-  deltaEl.className = 'kpi-delta ' + (delta > 0 ? 'up' : 'down');
-  document.getElementById('kpi-rev-sub').textContent = 'vs forecast (' + meta.periodName + ')';
+  setText('globalPeriodLabel', `Viewing: ${meta.context} (${meta.periodName}) · ${agg.range.startISO} → ${agg.range.endISO}`);
+  setText('efficiencyPeriodTag', `(${meta.periodName})`);
+  setText('signalsPeriodTag', `(${meta.context})`);
+  setText('revForecastPeriodTag', `(${meta.periodName})`);
+  setText('revByTypePeriodTag', `(${meta.periodName})`);
+  setText('newReturnPeriodTag', `(${meta.periodName})`);
+  setText('slaDonutPeriodTag', `(${meta.periodName})`);
+  setText('funnelPeriodTag', `(${meta.periodName})`);
+  setText('slaBacklogPeriodTag', `(${meta.periodName})`);
+  setText('customerSnapshotPeriodTag', `(${meta.periodName})`);
+  setText('issueLogPeriodTag', `(${meta.periodName})`);
+  setText('rootCausePeriodTag', `(${meta.periodName})`);
 
-  document.getElementById('kpi-throughput').textContent = d.throughput + '%';
-  document.getElementById('tp-received').textContent = d.throughputReceived.toLocaleString();
-  document.getElementById('tp-released').textContent = d.throughputReleased.toLocaleString();
+  // Revenue KPI + delta vs forecast (boss wants actual vs plan)
+  setText('kpi-revenue', fmt(agg.revenue));
+  setText('kpi-forecast', fmt(agg.forecast));
+  setText('fc-actual-label', fmt(agg.revenue));
+  // projected EOD is a simple extrapolation in mock
+  const projected = agg.frame === 'D' ? Math.round(agg.revenue * 1.45) : Math.round(agg.revenue * 1.12);
+  setText('fc-projected', fmt(projected));
+  const fcProgress = agg.forecast > 0 ? clamp((agg.revenue / agg.forecast) * 100, 0, 140) : 0;
+  const fcProgRounded = Math.round(fcProgress);
+  const fcEl = safeEl('fc-progress');
+  if (fcEl) fcEl.style.width = clamp(fcProgRounded, 0, 100) + '%';
+  setText('kpi-fc-period', `Period: ${meta.periodName}`);
 
-  const totalAlerts = d.alerts;
-  document.getElementById('kpi-alerts').textContent = totalAlerts;
+  const deltaPct = agg.forecast > 0 ? ((agg.revenue - agg.forecast) / agg.forecast) * 100 : 0;
+  const deltaEl = safeEl('kpi-rev-delta');
+  if (deltaEl) {
+    deltaEl.textContent = `${deltaPct >= 0 ? '↑' : '↓'} ${Math.abs(deltaPct).toFixed(1)}%`;
+    deltaEl.className = 'kpi-delta ' + (deltaPct >= 0 ? 'up' : 'down');
+  }
+  setText('kpi-rev-sub', `vs forecast (${meta.periodName})`);
 
+  // Lab throughput KPI (released/received)
+  setText('kpi-throughput', fmtPct(agg.throughputPct, 1));
+  setText('tp-received', agg.samplesReceived.toLocaleString());
+  setText('tp-released', agg.samplesReleased.toLocaleString());
+
+  // Alerts KPI: include certificate errors, complaints, quality, plus data entry + repeat requests
+  const totalAlerts = agg.certErrors + agg.complaints + agg.qualityIssues + agg.dataEntryErrors + agg.repeatedRequests;
+  setText('kpi-alerts', totalAlerts.toLocaleString());
   const alertCard = document.querySelector('.kpi-card.critical');
-  if (totalAlerts > 0) alertCard.classList.add('has-alerts');
-  else alertCard.classList.remove('has-alerts');
+  if (alertCard) {
+    if (totalAlerts > 0) alertCard.classList.add('has-alerts');
+    else alertCard.classList.remove('has-alerts');
+  }
+  const pills = safeEl('alert-pills');
+  if (pills) {
+    const isActive = (key) => currentAlertFilter === key ? 'active' : '';
+    pills.innerHTML = `
+      <div class="alert-pill actionable ${isActive('certErrors')}" onclick="setAlertFilter('certErrors')"><span class="count">${agg.certErrors}</span> Cert. Errors</div>
+      <div class="alert-pill actionable ${isActive('dataEntryErrors')}" onclick="setAlertFilter('dataEntryErrors')"><span class="count">${agg.dataEntryErrors}</span> Incorrect Data</div>
+      <div class="alert-pill actionable ${isActive('qualityIssues')}" onclick="setAlertFilter('qualityIssues')"><span class="count">${agg.qualityIssues}</span> Quality</div>
+      <div class="alert-pill actionable ${isActive('repeatedRequests')}" onclick="setAlertFilter('repeatedRequests')"><span class="count">${agg.repeatedRequests}</span> Repeat Requests</div>
+      <div class="alert-pill actionable ${isActive('complaints')}" onclick="setAlertFilter('complaints')"><span class="count">${agg.complaints}</span> Complaints</div>
+      ${currentAlertFilter !== 'all' ? '<div class="alert-pill actionable" onclick="setAlertFilter(\'all\')"><span class="count">×</span> Clear</div>' : ''}
+    `;
+  }
 
-  document.getElementById('alert-pills').innerHTML = `
-    <div class="alert-pill"><span class="count">${d.certErrors}</span> Cert. Errors</div>
-    <div class="alert-pill"><span class="count">${d.complaints}</span> Complaints</div>
-    <div class="alert-pill"><span class="count">${d.quality}</span> Quality</div>`;
+  // Business signals (New customers, urgent samples)
+  setText('newCustomersLabel', `New Customers (${meta.context})`);
+  setText('topCustomerLabel', `Top Customer (${meta.context})`);
+  setText('newCustomersValue', `+${agg.customers.newCustomers}`);
+  setText('newCustomersSub', meta.compareText);
+  // urgent signal line is static text; keep but make it logical via numbers
+  const urgentSignal = document.querySelector('.signal-row:nth-child(3) .signal-value');
+  const urgentSub = document.querySelector('.signal-row:nth-child(3) .signal-sub');
+  if (urgentSignal) urgentSignal.textContent = `${agg.urgent.toLocaleString()} STAT`;
+  if (urgentSub) urgentSub.textContent = `${Math.round(agg.urgent * 0.35)} in progress`;
 
-  // Update sparkline
+  // SLA & Backlog card values
+  setText('slaOnTimeValue', fmtPct(agg.onTimePct, 1));
+  setText('slaDelayedValue', fmtPct(agg.delayedPct, 1));
+  const onBar = safeEl('slaOnTimeBar');
+  const delBar = safeEl('slaDelayedBar');
+  if (onBar) onBar.style.width = `${clamp(agg.onTimePct, 0, 100)}%`;
+  if (delBar) delBar.style.width = `${clamp(agg.delayedPct, 0, 100)}%`;
+  setText('pendingSamplesValue', agg.samplesPending.toLocaleString());
+  setText('avgProcTimeValue', `${Math.round(agg.avgProcHours)}h`);
+
+  // Finance mini stat at top
+  setText('finRevenueValue', fmt(agg.revenue));
+  setText('finRevenueLabel', `${meta.context} Revenue`);
+
+  // Customers mini stats + snapshot
+  setText('custActiveValue', agg.customers.total.toLocaleString());
+  setText('custActiveLabel', `Active Customers (${meta.context}, avg/day)`);
+
+  const yAgg = aggregateWindow('D', previousAnchorISO('D', selectedDate));
+  setText('custYesterdayValue', yAgg.customers.total.toLocaleString());
+  setText('custYesterdayLabel', 'Total Customers (Yesterday)');
+
+  setText('custNewValue', `+${agg.customers.newCustomers}`);
+  setText('custNewLabel', `New Customers (${meta.context})`);
+  setText('custReturningValue', agg.customers.returningCustomers.toLocaleString());
+  setText('custReturningLabel', `Returning Customers (${meta.context})`);
+
+  setText('custTodayValue', aggregateWindow('D', selectedDate).customers.total.toLocaleString());
+  // "this month" should always be month of selected date
+  setText('custMonthTotalValue', aggregateWindow('M', selectedDate).customers.total.toLocaleString());
+  setText('custHighVolumeValue', agg.customers.highVolumeCustomers.toLocaleString());
+  const allTime = getAllTimeCustomerBase(selectedDate);
+  setText('custAllTimeValue', allTime.toLocaleString());
+  const bounds = getStoreDateBounds();
+  setText('custAllTimeLabel', bounds ? `Total Customers Since ${bounds.startISO}` : 'Total Customers Since Start');
+  setText('custRushCount', agg.customers.rushCustomers.toLocaleString());
+  setText('custComplaintsCount', agg.complaints.toLocaleString());
+
+  updateSidebarBadges(agg);
+
+  // sparkline data (last 7 days)
   if (charts.spark) {
-    charts.spark.data.datasets[0].data = d.sparkData;
+    charts.spark.data.datasets[0].data = getSparkSeries(selectedDate);
     charts.spark.update();
   }
-}
 
-function updateRevenueForecastChart() {
-  if (!charts.revForecast) return;
-  const d = MOCK[currentFrame].revForecast;
-  charts.revForecast.data.labels = d.labels;
-  charts.revForecast.data.datasets[0].data = d.actual;
-  charts.revForecast.data.datasets[1].data = d.forecast;
-  charts.revForecast.update();
-}
-
-function updateTimeframeContext() {
-  const meta = FRAME_META[currentFrame];
-  const customer = CUSTOMER_METRICS[currentFrame];
-  document.getElementById('globalPeriodLabel').textContent =
-    'Viewing: ' + meta.context + ' (' + meta.periodName + ')';
-  document.getElementById('efficiencyPeriodTag').textContent = '(' + meta.periodName + ')';
-  document.getElementById('signalsPeriodTag').textContent = '(' + meta.context + ')';
-  document.getElementById('revForecastPeriodTag').textContent = '(' + meta.periodName + ')';
-
-  document.getElementById('newCustomersLabel').textContent = 'New Customers (' + meta.context + ')';
-  document.getElementById('topCustomerLabel').textContent = 'Top Customer (' + meta.context + ')';
-  document.getElementById('newCustomersValue').textContent = '+' + customer.newCount;
-  document.getElementById('newCustomersSub').textContent = meta.compareText;
-
-  document.getElementById('finRevenueValue').textContent = fmt(MOCK[currentFrame].revenue);
-  document.getElementById('finRevenueLabel').textContent = meta.context + ' Revenue';
-
-  document.getElementById('custActiveValue').textContent = customer.active.toLocaleString();
-  document.getElementById('custActiveLabel').textContent = customer.activeLabel;
-  document.getElementById('custNewValue').textContent = '+' + customer.newCount;
-  document.getElementById('custNewLabel').textContent = customer.newLabel;
-  document.getElementById('custReturningValue').textContent = customer.returning.toLocaleString();
-  document.getElementById('custReturningLabel').textContent = customer.returningLabel;
+  // keep a simple delta comparison for revenue card context
+  const revDeltaVsPrev = prev.revenue > 0 ? ((agg.revenue - prev.revenue) / prev.revenue) * 100 : 0;
+  const deltaHint = document.querySelector('#kpi-rev-delta');
+  if (deltaHint && Number.isFinite(revDeltaVsPrev)) {
+    // keep existing badge; it's already forecast delta, so don't overwrite
+  }
 }
 
 // ─── CHART HELPERS ───────────────────────────────────────
@@ -1673,9 +2001,9 @@ function initSparkline() {
   charts.spark = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: MOCK.D.sparkData.map((_,i) => i),
+      labels: Array.from({length: 7}, (_, i) => i),
       datasets: [{
-        data: MOCK.D.sparkData,
+        data: [],
         borderColor: '#059669',
         borderWidth: 2,
         fill: true,
@@ -1696,7 +2024,7 @@ function initSparkline() {
 // ─── EFFICIENCY CHART ────────────────────────────────────
 function initEfficiencyChart() {
   const ctx = document.getElementById('efficiencyChart').getContext('2d');
-  const d = MOCK.D.efficiency;
+  const d = { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], samples: [], revenue: [] };
   charts.efficiency = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -1757,10 +2085,54 @@ function initEfficiencyChart() {
 
 function updateEfficiencyChart() {
   if (!charts.efficiency) return;
-  const d = MOCK[currentFrame].efficiency;
-  charts.efficiency.data.labels = d.labels;
-  charts.efficiency.data.datasets[0].data = d.samples;
-  charts.efficiency.data.datasets[1].data = d.revenue;
+  // Efficiency chart shows timeline within selected window:
+  // D/W => daily points; M => weekly points; Y => monthly points
+  const { start, end } = getPeriodRange(currentFrame, selectedDate);
+  const days = enumerateRangeISO(start, end).filter(iso => STORE.daily.has(iso));
+  const labels = [];
+  const samples = [];
+  const revenue = [];
+
+  if (currentFrame === 'D' || currentFrame === 'W') {
+    days.forEach(iso => {
+      const dt = parseISODate(iso);
+      labels.push(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()]);
+      const r = STORE.daily.get(iso);
+      samples.push(r.samplesReceived);
+      revenue.push(r.revenue);
+    });
+  } else if (currentFrame === 'M') {
+    // group by weeks
+    let cur = weekStartMonday(start);
+    while (cur <= end) {
+      const wStart = cur;
+      const wEnd = addDays(wStart, 6);
+      const win = enumerateRangeISO(wStart, wEnd).filter(iso => STORE.daily.has(iso));
+      const s = win.reduce((a, iso) => a + STORE.daily.get(iso).samplesReceived, 0);
+      const rev = win.reduce((a, iso) => a + STORE.daily.get(iso).revenue, 0);
+      labels.push(`${pad2(wStart.getDate())} ${MONTHS[wStart.getMonth()]}`);
+      samples.push(s);
+      revenue.push(rev);
+      cur = addDays(cur, 7);
+    }
+  } else {
+    // Y: monthly
+    const year = start.getFullYear();
+    for (let m=0;m<12;m++) {
+      const mStart = new Date(year, m, 1);
+      const mEnd = new Date(year, m+1, 0);
+      const win = enumerateRangeISO(mStart, mEnd).filter(iso => STORE.daily.has(iso));
+      const s = win.reduce((a, iso) => a + STORE.daily.get(iso).samplesReceived, 0);
+      const rev = win.reduce((a, iso) => a + STORE.daily.get(iso).revenue, 0);
+      labels.push(MONTHS[m]);
+      samples.push(s);
+      revenue.push(rev);
+    }
+  }
+
+  charts.efficiency.data.labels = labels;
+  charts.efficiency.data.datasets[0].data = samples;
+  charts.efficiency.data.datasets[1].data = revenue;
   charts.efficiency.update();
 }
 
@@ -1768,7 +2140,7 @@ function updateEfficiencyChart() {
 function initFinanceCharts() {
   // Revenue vs Forecast
   const ctx = document.getElementById('revForecastChart').getContext('2d');
-  const d = MOCK[currentFrame].revForecast;
+  const d = { labels: [], actual: [], forecast: [] };
   charts.revForecast = new Chart(ctx, {
     type: 'line',
     data: {
@@ -1823,8 +2195,8 @@ function initFinanceCharts() {
   charts.segmentDonut = new Chart(ctx2, {
     type: 'doughnut',
     data: {
-      labels: ['Corporate','Hospital','Clinic','Individual'],
-      datasets: [{ data: [48,31,14,7], backgroundColor: ['#1E3A8A','#3B82F6','#93C5FD','#BFDBFE'], borderWidth: 0 }]
+      labels: TYPES,
+      datasets: [{ data: [0,0,0,0], backgroundColor: ['#1E3A8A','#3B82F6','#93C5FD','#BFDBFE'], borderWidth: 0 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -1839,7 +2211,7 @@ function initFinanceCharts() {
     type: 'doughnut',
     data: {
       labels: ['Returning','New'],
-      datasets: [{ data: [78,22], backgroundColor: ['#059669','#6EE7B7'], borderWidth: 0 }]
+      datasets: [{ data: [0,0], backgroundColor: ['#059669','#6EE7B7'], borderWidth: 0 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -1856,7 +2228,7 @@ function initPerfCharts() {
     type: 'doughnut',
     data: {
       labels: ['On-Time','Delayed'],
-      datasets: [{ data: [87.4,12.6], backgroundColor: ['#059669','#DC2626'], borderWidth: 0 }]
+      datasets: [{ data: [0,0], backgroundColor: ['#059669','#DC2626'], borderWidth: 0 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -1867,69 +2239,22 @@ function initPerfCharts() {
       }
     }
   });
-
-  // Province bars
-  const provinces = [
-    { name: 'Capital', count: 98, max: 98 },
-    { name: 'Central', count: 72, max: 98 },
-    { name: 'Northern', count: 54, max: 98 },
-    { name: 'Eastern', count: 41, max: 98 },
-    { name: 'Western', count: 29, max: 98 },
-    { name: 'Southern', count: 18, max: 98 },
-  ];
-  const container = document.getElementById('provinceBars');
-  const colors = ['#1E3A8A','#2d52c4','#3B82F6','#60A5FA','#93C5FD','#BFDBFE'];
-  provinces.forEach((p, i) => {
-    const pct = (p.count / p.max * 100).toFixed(0);
-    container.innerHTML += `
-      <div class="province-item">
-        <div class="province-name">${p.name}</div>
-        <div class="province-bar-bg">
-          <div class="province-bar-fill" style="width:${pct}%;background:${colors[i]}">${pct}%</div>
-        </div>
-        <div class="province-count">${p.count}</div>
-      </div>`;
-  });
 }
 
 // ─── CUSTOMER CHARTS ─────────────────────────────────────
 function initCustomerCharts() {
-  const customers = [
-    { name: 'MegaCorp Ltd', type: 'Corporate', samples: 284, revenue: 41200, status: 'Active' },
-    { name: 'National Hospital', type: 'Hospital', samples: 241, revenue: 38400, status: 'Active' },
-    { name: 'PharmaCo Ind.', type: 'Corporate', samples: 198, revenue: 31800, status: 'Active' },
-    { name: 'AgroChem Ltd', type: 'Corporate', samples: 176, revenue: 28200, status: 'Active' },
-    { name: 'City General', type: 'Hospital', samples: 154, revenue: 24600, status: 'Active' },
-    { name: 'BioResearch X', type: 'Corporate', samples: 132, revenue: 21100, status: 'Active' },
-    { name: 'Regional Clinic A', type: 'Clinic', samples: 98, revenue: 15700, status: 'Active' },
-    { name: 'Univ. Medical Ctr', type: 'Hospital', samples: 87, revenue: 13900, status: 'Active' },
-    { name: 'Central Lab Co.', type: 'Corporate', samples: 72, revenue: 11500, status: 'Active' },
-    { name: 'Private Clinic Z', type: 'Clinic', samples: 58, revenue: 9300, status: 'Active' },
-  ];
-
+  // Table and chart are updated dynamically by refreshAll()
   const tbody = document.getElementById('customerTable');
-  customers.forEach((c, i) => {
-    tbody.innerHTML += `
-      <tr>
-        <td style="color:var(--text-muted);font-weight:600">${i+1}</td>
-        <td><strong>${c.name}</strong></td>
-        <td style="color:var(--text-secondary)">${c.type}</td>
-        <td>${c.samples.toLocaleString()}</td>
-        <td style="font-weight:600">$${c.revenue.toLocaleString()}</td>
-        <td><span class="risk-badge risk-low">Active</span></td>
-      </tr>`;
-  });
-
+  if (tbody) tbody.innerHTML = '';
   const ctx = document.getElementById('customerChart').getContext('2d');
   charts.customerChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: customers.slice(0,8).map(c => c.name.split(' ')[0]),
+      labels: [],
       datasets: [{
         label: 'Revenue (MTD)',
-        data: customers.slice(0,8).map(c => c.revenue),
-        backgroundColor: customers.slice(0,8).map((_, i) =>
-          `rgba(30,58,138,${1 - i * 0.1})`),
+        data: [],
+        backgroundColor: [],
         borderRadius: 6,
         borderWidth: 0
       }]
@@ -1952,16 +2277,428 @@ function initCustomerCharts() {
   });
 }
 
+// ─── FINANCE FILTER (SEGMENT CONTROL) ─────────────────────
+function setFinanceResolution(res, btn) {
+  financeResolution = res;
+  document.querySelectorAll('.segment-ctrl .seg-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  updateRevenueForecastChart();
+}
+
+function buildFinanceSeries(resolution) {
+  // Always chart for the year of selectedDate for clarity
+  const d = parseISODate(selectedDate);
+  const year = d.getFullYear();
+  const actualBy = new Map();
+  const forecastBy = new Map();
+  const labels = [];
+
+  function keyFor(dateObj) {
+    const m = dateObj.getMonth(); // 0..11
+    if (resolution === 'Monthly') return `${year}-${pad2(m+1)}`;
+    if (resolution === 'Quarterly') return `${year}-Q${quarterOfMonth(m)}`;
+    return `${year}`; // Yearly
+  }
+
+  // initialize keys in order
+  if (resolution === 'Monthly') {
+    for (let m=0;m<12;m++) {
+      const k = `${year}-${pad2(m+1)}`;
+      labels.push(MONTHS[m]);
+      actualBy.set(k, 0);
+      forecastBy.set(k, 0);
+    }
+  } else if (resolution === 'Quarterly') {
+    for (let q=1;q<=4;q++) {
+      const k = `${year}-Q${q}`;
+      labels.push(`Q${q}`);
+      actualBy.set(k, 0);
+      forecastBy.set(k, 0);
+    }
+  } else {
+    const k = `${year}`;
+    labels.push(`${year}`);
+    actualBy.set(k, 0);
+    forecastBy.set(k, 0);
+  }
+
+  // sum daily into groups
+  const start = new Date(year, 0, 1);
+  const end = new Date(year, 11, 31);
+  enumerateRangeISO(start, end).forEach(iso => {
+    const row = STORE.daily.get(iso);
+    if (!row) return;
+    const dt = parseISODate(iso);
+    const k = keyFor(dt);
+    actualBy.set(k, (actualBy.get(k) || 0) + row.revenue);
+    forecastBy.set(k, (forecastBy.get(k) || 0) + row.forecastRevenue);
+  });
+
+  const actual = [];
+  const forecast = [];
+  if (resolution === 'Monthly') {
+    for (let m=0;m<12;m++) {
+      const k = `${year}-${pad2(m+1)}`;
+      actual.push(actualBy.get(k) || 0);
+      forecast.push(forecastBy.get(k) || 0);
+    }
+  } else if (resolution === 'Quarterly') {
+    for (let q=1;q<=4;q++) {
+      const k = `${year}-Q${q}`;
+      actual.push(actualBy.get(k) || 0);
+      forecast.push(forecastBy.get(k) || 0);
+    }
+  } else {
+    const k = `${year}`;
+    actual.push(actualBy.get(k) || 0);
+    forecast.push(forecastBy.get(k) || 0);
+  }
+
+  return { labels, actual, forecast };
+}
+
+function updateRevenueForecastChart() {
+  if (!charts.revForecast) return;
+  const s = buildFinanceSeries(financeResolution);
+  charts.revForecast.data.labels = s.labels;
+  charts.revForecast.data.datasets[0].data = s.actual;
+  charts.revForecast.data.datasets[1].data = s.forecast;
+  charts.revForecast.update();
+}
+
+function updateFinanceDonuts() {
+  if (!charts.segmentDonut || !charts.newReturnDonut) return;
+  const agg = aggregateWindow(currentFrame, selectedDate);
+  const totalTypeRev = TYPES.reduce((a,t)=>a + (agg.typeRevenue[t] || 0), 0) || 1;
+  const pct = TYPES.map(t => (agg.typeRevenue[t] || 0) / totalTypeRev * 100);
+  charts.segmentDonut.data.datasets[0].data = pct.map(x => Number(x.toFixed(1)));
+  charts.segmentDonut.update();
+
+  const totalCustomers = Math.max(1, agg.customers.total);
+  const newPct = clamp((agg.customers.newCustomers / totalCustomers) * 100, 0, 100);
+  const retPct = 100 - newPct;
+  charts.newReturnDonut.data.datasets[0].data = [Number(retPct.toFixed(1)), Number(newPct.toFixed(1))];
+  charts.newReturnDonut.update();
+
+  // Legends with both % and $ for finance clarity
+  const segLegend = safeEl('segmentDonutLegend');
+  if (segLegend) {
+    const colors = ['#1E3A8A','#3B82F6','#93C5FD','#BFDBFE'];
+    segLegend.innerHTML = TYPES.map((t,i) => {
+      const dollars = Math.round(agg.typeRevenue[t] || 0);
+      return `
+        <div class="legend-item">
+          <div class="legend-dot" style="background:${colors[i]}"></div>
+          <div class="legend-label">${t}</div>
+          <div class="legend-val">${pct[i].toFixed(0)}% · ${fmt(dollars)}</div>
+        </div>`;
+    }).join('');
+  }
+  const nrLegend = safeEl('newReturnDonutLegend');
+  if (nrLegend) {
+    nrLegend.innerHTML = `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#059669"></div>
+        <div class="legend-label">Returning</div>
+        <div class="legend-val">${retPct.toFixed(0)}%</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#6EE7B7"></div>
+        <div class="legend-label">New</div>
+        <div class="legend-val">${newPct.toFixed(0)}%</div>
+      </div>
+    `;
+  }
+}
+
+function updatePerformanceWidgets() {
+  const agg = aggregateWindow(currentFrame, selectedDate);
+
+  // SLA donut
+  if (charts.slaDonut) {
+    charts.slaDonut.data.datasets[0].data = [Number(agg.onTimePct.toFixed(1)), Number(agg.delayedPct.toFixed(1))];
+    charts.slaDonut.update();
+  }
+  setText('slaLegendOnTime', fmtPct(agg.onTimePct, 1));
+  setText('slaLegendDelayed', fmtPct(agg.delayedPct, 1));
+
+  // Throughput funnel: received -> processing -> released -> pending
+  // Processing is approximated as received - (released + pending backlog share)
+  const received = agg.samplesReceived;
+  const released = agg.samplesReleased;
+  const pending = agg.samplesPending;
+  const processing = Math.max(0, received - pending);
+
+  const pct = (v) => received > 0 ? (v / received * 100) : 0;
+  setText('funnelReceivedNum', received.toLocaleString());
+  setText('funnelReceivedPct', '100%');
+  setText('funnelProcessingNum', processing.toLocaleString());
+  setText('funnelProcessingPct', fmtPct(pct(processing), 1));
+  setText('funnelReleasedNum', released.toLocaleString());
+  setText('funnelReleasedPct', fmtPct(pct(released), 1));
+  setText('funnelPendingNum', pending.toLocaleString());
+  setText('funnelPendingPct', fmtPct(pct(pending), 1));
+
+  const rBar = safeEl('funnelReceivedBar');
+  const pBar = safeEl('funnelProcessingBar');
+  const relBar = safeEl('funnelReleasedBar');
+  const penBar = safeEl('funnelPendingBar');
+  if (rBar) rBar.style.width = '100%';
+  if (pBar) pBar.style.width = `${clamp(pct(processing), 2, 100)}%`;
+  if (relBar) relBar.style.width = `${clamp(pct(released), 2, 100)}%`;
+  if (penBar) penBar.style.width = `${clamp(pct(pending), 2, 100)}%`;
+
+  // Provinces workload distribution (now actually changes with filter)
+  const container = safeEl('provinceBars');
+  if (container) {
+    container.innerHTML = '';
+    const counts = PROVINCES.map(p => ({ name: p, count: agg.provinceCounts[p] || 0 }));
+    const max = Math.max(1, ...counts.map(x => x.count));
+    const colors = ['#1E3A8A','#2d52c4','#3B82F6','#60A5FA','#93C5FD','#BFDBFE'];
+    counts.sort((a,b) => b.count - a.count);
+    counts.forEach((p, i) => {
+      const pctVal = (p.count / max * 100);
+      container.innerHTML += `
+        <div class="province-item">
+          <div class="province-name">${p.name}</div>
+          <div class="province-bar-bg">
+            <div class="province-bar-fill" style="width:${pctVal.toFixed(0)}%;background:${colors[i % colors.length]}">${pctVal.toFixed(0)}%</div>
+          </div>
+          <div class="province-count">${p.count.toLocaleString()}</div>
+        </div>`;
+    });
+  }
+
+  renderIssueLogAndRootCause(agg);
+}
+
+function updateSidebarBadges(agg) {
+  // Finance badge: revenue variance vs forecast for selected period
+  const finBadge = safeEl('financeNavBadge');
+  if (finBadge) {
+    const deltaPct = agg.forecast > 0 ? ((agg.revenue - agg.forecast) / agg.forecast) * 100 : 0;
+    finBadge.textContent = `${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%`;
+    finBadge.className = 'nav-badge ' + (deltaPct >= 0 ? 'positive' : 'warning');
+  }
+  // Performance badge: pending backlog in current period
+  const perfBadge = safeEl('performanceNavBadge');
+  if (perfBadge) perfBadge.textContent = fmtCompact(agg.samplesPending);
+}
+
+function setAlertFilter(filterKey) {
+  currentAlertFilter = filterKey || 'all';
+  const perfNav = Array.from(document.querySelectorAll('.nav-item')).find(n => n.textContent.includes('Performance & Lab'));
+  showPage('performance', perfNav || null);
+  refreshAll();
+}
+
+function buildIssueItems(agg) {
+  const rand = mulberry32(hashStr(`issues-${selectedDate}-${currentFrame}`));
+  const departments = ['Biochemistry','Microbiology','Genetics','Chemistry','Histology'];
+  const reasons = {
+    certErrors: ['Missing certificate fields', 'Invalid approver signature', 'Certificate date mismatch'],
+    dataEntryErrors: ['Wrong patient DOB', 'Missing test code', 'Wrong customer ID', 'Duplicate registration'],
+    qualityIssues: ['Reagent batch instability', 'Control out of range', 'Instrument calibration drift'],
+    repeatedRequests: ['Retest requested due to contamination', 'Sample recollection requested', 'Customer requested method confirmation'],
+    complaints: ['Delayed urgent result', 'Format mismatch request', 'Turnaround dissatisfaction']
+  };
+  const prefixes = {
+    certErrors: 'Certificate Error',
+    dataEntryErrors: 'Data Entry Issue',
+    qualityIssues: 'Quality Issue',
+    repeatedRequests: 'Repeat Request',
+    complaints: 'Complaint'
+  };
+  const iconFor = (k) => (k === 'qualityIssues' || k === 'complaints' ? '⚠' : '↺');
+  const bgFor = (k) => (k === 'qualityIssues' || k === 'complaints' ? 'var(--critical-bg)' : 'var(--warning-bg)');
+
+  const categoryCounts = {
+    certErrors: agg.certErrors,
+    dataEntryErrors: agg.dataEntryErrors,
+    qualityIssues: agg.qualityIssues,
+    repeatedRequests: agg.repeatedRequests,
+    complaints: agg.complaints
+  };
+  const topCustomers = ['MegaCorp Ltd','National Hospital','PharmaCo Industries','City General Hospital','AgroChem Ltd','Regional Clinic A'];
+  const items = [];
+  Object.entries(categoryCounts).forEach(([k, count]) => {
+    const shown = Math.min(count, 4);
+    for (let i = 0; i < shown; i++) {
+      const dept = departments[Math.floor(rand() * departments.length)];
+      const cust = topCustomers[Math.floor(rand() * topCustomers.length)];
+      const reason = reasons[k][Math.floor(rand() * reasons[k].length)];
+      const sid = `#SMP-${Math.floor(8000 + rand() * 1000)}`;
+      const age = i === 0 ? `${Math.floor(1 + rand()*6)}h ago` : `${Math.floor(1 + rand()*3)}d ago`;
+      items.push({
+        type: k,
+        title: `${prefixes[k]} — ${cust}`,
+        detail: `${sid} · ${reason} · ${dept}`,
+        age,
+        icon: iconFor(k),
+        bg: bgFor(k),
+        department: dept,
+        customer: cust
+      });
+    }
+  });
+  // sort by severity style: complaints/quality first
+  const score = (k) => (k === 'complaints' ? 5 : k === 'qualityIssues' ? 4 : k === 'certErrors' ? 3 : k === 'repeatedRequests' ? 2 : 1);
+  items.sort((a, b) => score(b.type) - score(a.type));
+  return items;
+}
+
+function renderIssueLogAndRootCause(agg) {
+  const allItems = buildIssueItems(agg);
+  const items = currentAlertFilter === 'all' ? allItems : allItems.filter(i => i.type === currentAlertFilter);
+  const list = safeEl('issueLogList');
+  const filterText = safeEl('issueLogFilterText');
+  const openBadge = safeEl('issueLogOpenBadge');
+  if (filterText) {
+    const names = {
+      all: 'All issues',
+      certErrors: 'Certificate Errors',
+      dataEntryErrors: 'Incorrect Data Entries',
+      qualityIssues: 'Quality Issues',
+      repeatedRequests: 'Repeat Requests',
+      complaints: 'Complaints'
+    };
+    filterText.textContent = `Showing: ${names[currentAlertFilter] || 'All issues'} (${items.length})`;
+  }
+  if (openBadge) openBadge.textContent = `${items.length} Open`;
+  if (list) {
+    if (!items.length) {
+      list.innerHTML = `
+        <div class="issue-row">
+          <div class="issue-icon" style="background:var(--surface-2)">✓</div>
+          <div class="issue-content">
+            <div class="issue-title">No open issues in this filter</div>
+            <div class="issue-detail">Try another period or clear alert filter.</div>
+          </div>
+          <div class="issue-time">Now</div>
+        </div>`;
+    } else {
+      list.innerHTML = items.slice(0, 10).map(i => `
+        <div class="issue-row">
+          <div class="issue-icon" style="background:${i.bg}">${i.icon}</div>
+          <div class="issue-content">
+            <div class="issue-title">${i.title}</div>
+            <div class="issue-detail">${i.detail}</div>
+          </div>
+          <div class="issue-time">${i.age}</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  const root = safeEl('rootCauseList');
+  if (!root) return;
+  const countBy = (arr, key) => arr.reduce((acc, x) => { acc[x[key]] = (acc[x[key]] || 0) + 1; return acc; }, {});
+  const maxKey = (obj) => Object.keys(obj).sort((a,b)=>(obj[b]||0)-(obj[a]||0))[0] || '-';
+  const deptCounts = countBy(allItems, 'department');
+  const customerCounts = countBy(allItems, 'customer');
+  const typeCounts = countBy(allItems, 'type');
+  const driver = maxKey(typeCounts);
+  const driverLabel = {
+    certErrors: 'Certificate Documentation',
+    dataEntryErrors: 'Data Entry Accuracy',
+    qualityIssues: 'Lab Quality Control',
+    repeatedRequests: 'Repeat/Retest Demand',
+    complaints: 'Customer Service & SLA'
+  }[driver] || '-';
+  const actionText = {
+    certErrors: 'Assign QA lead to certificate pre-release checklist and signer validation.',
+    dataEntryErrors: 'Enforce double-entry validation for high-risk fields (DOB, client ID, test code).',
+    qualityIssues: 'Escalate QA CAPA on reagent/instrument drift and block affected batch releases.',
+    repeatedRequests: 'Review sample handling SOP and contamination controls by department.',
+    complaints: 'Open SLA recovery plan: priority queue + customer communication within 24h.'
+  }[driver] || 'Review issue breakdown by department and set accountable owner.';
+
+  root.innerHTML = `
+    <div class="backlog-stat">
+      <div><div class="backlog-label">Top Department</div><div style="font-size:11px;color:var(--text-muted)">source of delays/issues</div></div>
+      <div class="backlog-value">${maxKey(deptCounts)}</div>
+    </div>
+    <div class="backlog-stat">
+      <div><div class="backlog-label">Top Driver</div><div style="font-size:11px;color:var(--text-muted)">main operational reason</div></div>
+      <div class="backlog-value" style="font-size:16px">${driverLabel}</div>
+    </div>
+    <div class="backlog-stat">
+      <div><div class="backlog-label">Top Affected Customer</div><div style="font-size:11px;color:var(--text-muted)">highest issue frequency</div></div>
+      <div class="backlog-value" style="font-size:16px">${maxKey(customerCounts)}</div>
+    </div>
+    <div class="backlog-stat">
+      <div><div class="backlog-label">Suggested Action</div><div style="font-size:11px;color:var(--text-muted)">executive response</div></div>
+      <div class="backlog-value" style="font-size:13px;line-height:1.3;max-width:380px">${actionText}</div>
+    </div>
+  `;
+}
+
+function updateCustomerTableAndChart() {
+  if (!safeEl('customerTable') || !charts.customerChart) return;
+  const agg = aggregateWindow(currentFrame, selectedDate);
+  // Derive per-customer revenue/samples for the selected month (more stable)
+  const monthAgg = aggregateWindow('M', selectedDate);
+  const totalRev = Math.max(1, monthAgg.revenue);
+  const rand = mulberry32(hashStr(`${selectedDate}-${currentFrame}`));
+
+  const rows = STORE.customers.map(c => {
+    const baseShare = c.type === 'Corporate' ? 0.12 : c.type === 'Hospital' ? 0.10 : c.type === 'Clinic' ? 0.06 : 0.03;
+    const jitter = clamp(baseShare * (0.65 + rand()*0.9), 0.01, 0.22);
+    const revenue = Math.round(totalRev * jitter);
+    const samples = Math.round(revenue / (240 + rand()*80));
+    return { ...c, revenue, samples, status: 'Active' };
+  }).sort((a,b) => b.revenue - a.revenue);
+
+  const top = rows.slice(0, 10);
+  const tbody = safeEl('customerTable');
+  tbody.innerHTML = top.map((c, i) => `
+    <tr>
+      <td style="color:var(--text-muted);font-weight:600">${i+1}</td>
+      <td><strong>${c.name}</strong></td>
+      <td style="color:var(--text-secondary)">${c.type}</td>
+      <td>${c.samples.toLocaleString()}</td>
+      <td style="font-weight:600">${fmt(c.revenue)}</td>
+      <td><span class="risk-badge risk-low">${c.status}</span></td>
+    </tr>
+  `).join('');
+
+  const top8 = rows.slice(0, 8);
+  charts.customerChart.data.labels = top8.map(c => c.name.split(' ')[0]);
+  charts.customerChart.data.datasets[0].label = `Revenue (${MONTHS[parseISODate(selectedDate).getMonth()]} ${parseISODate(selectedDate).getFullYear()})`;
+  charts.customerChart.data.datasets[0].data = top8.map(c => c.revenue);
+  charts.customerChart.data.datasets[0].backgroundColor = top8.map((_, i) => `rgba(30,58,138,${clamp(1 - i*0.1, 0.35, 1)})`);
+  charts.customerChart.update();
+}
+
+function refreshAll() {
+  updateOverviewAndContext();
+  updateEfficiencyChart();
+  updateRevenueForecastChart();
+  updateFinanceDonuts();
+  updatePerformanceWidgets();
+  updateCustomerTableAndChart();
+}
+
 // ─── INIT ─────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   // Set today's date
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('datePicker').value = today;
+  const today = new Date();
+  selectedDate = toISODate(today);
+  const dp = document.getElementById('datePicker');
+  if (dp) {
+    dp.value = selectedDate;
+    dp.addEventListener('change', (e) => {
+      selectedDate = e.target.value || selectedDate;
+      // ensure data exists for selected date
+      if (!STORE.daily.has(selectedDate)) generateDailyMockData(selectedDate);
+      refreshAll();
+    });
+  }
 
+  generateDailyMockData(selectedDate);
   initSparkline();
   initEfficiencyChart();
-  updateKPIs();
-  updateTimeframeContext();
+  refreshAll();
 });
 </script>
 </body>
